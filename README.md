@@ -18,8 +18,11 @@ App.ApplicationAdapter = DS.IndexedDBAdapter.extend({
 Tests
 -----
 
-Run in your terminal, `rackup` (make sure you have Ruby installed). Then visit
+Run `rackup` in your terminal (make sure you have Ruby installed). Then visit
 `http://localhost:9292` in your browser.
+
+To run tests without a browser, run `phantomjs tests/runner.js tests/index.html`
+in your terminal.
 
 License & Copyright
 -------------------
