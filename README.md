@@ -1,6 +1,8 @@
 Ember Data IndexedDB Adapter
 ================================
 
+[![Build Status](https://travis-ci.org/kurko/ember-indexeddb-adapter.png?branch=master)](https://travis-ci.org/kurko/ember-indexeddb-adapter)
+
 Store your Ember application data in IndexedDB. Compatible with Ember Data 1.0.0-beta5+.
 Fully tested, used in a real world app.
 
