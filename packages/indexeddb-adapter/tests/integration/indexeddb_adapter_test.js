@@ -2,12 +2,20 @@
 var get = Ember.get,
     App = {};
 
-var store;
+var store, database;
 
-module('DS.IndexedDBAdapter', {
+module('Integration/DS.IndexedDBAdapter', {
   setup: function() {
-    //localStorage.setItem('DS.IndexedDBAdapter', JSON.stringify(FIXTURES));
     var env = {};
+
+    //localStorage.setItem('DS.IndexedDBAdapter', JSON.stringify(FIXTURES));
+
+    database = window.indexedDB.open("AdapterTestDb", 1);
+
+    var Adapter = DS.IndexedDBAdapter.extend({
+      databaseName: "AdapterTestDb",
+      //migration: IndexedDBMigration.create()
+    });
 
     App.Person = DS.Model.extend({
       name: DS.attr('string'),

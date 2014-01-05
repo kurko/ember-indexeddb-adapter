@@ -47,3 +47,38 @@ DS.JSONSerializer.reopen({
     return this._super(attributeType, true) || transforms[attributeType];
   }
 });
+
+var setDatabaseSchema = function() {
+  request.onupgradeneeded = function(event) {
+    var db = event.target.result;
+
+    // Create an objectStore to hold information about our customers. We're
+    // going to use "ssn" as our key path because it's guaranteed to be
+    // unique.
+    var objectStore = db.createObjectStore("customers", { keyPath: "ssn" });
+
+    // Create an index to search customers by name. We may have duplicates
+    // so we can't use a unique index.
+    objectStore.createIndex("name", "name", { unique: false });
+
+    // Create an index to search customers by email. We want to ensure that
+    // no two customers have the same email, so use a unique index.
+    objectStore.createIndex("email", "email", { unique: true });
+
+    // Store values in the newly created objectStore.
+    for (var i in customerData) {
+      objectStore.add(customerData[i]);
+    }
+  };
+}
+
+QUnit.pending = function() {
+  QUnit.test(arguments[0] + ' (SKIPPED)', function() {
+    var li = document.getElementById(QUnit.config.current.id);
+    QUnit.done(function() {
+      li.style.background = '#FFFF99';
+    });
+    ok(true);
+  });
+};
+pending = QUnit.pending;
