@@ -10,11 +10,16 @@ module('Integration/DS.IndexedDBAdapter', {
 
     //localStorage.setItem('DS.IndexedDBAdapter', JSON.stringify(FIXTURES));
 
-    database = window.indexedDB.open("AdapterTestDb", 1);
+    //database = window.indexedDB.open("AdapterTestDb", 1);
 
     var Adapter = DS.IndexedDBAdapter.extend({
       databaseName: "AdapterTestDb",
-      //migration: IndexedDBMigration.create()
+      migration: DS.IndexedDBMigration.create({
+        migrations: [
+          function() {
+          }
+        ]
+      })
     });
 
     App.Person = DS.Model.extend({

@@ -82,3 +82,20 @@ QUnit.pending = function() {
   });
 };
 pending = QUnit.pending;
+
+/**
+ * INDEXED SPECIFIC
+ */
+
+var deleteDatabase = function(dbName) {
+  return new Ember.RSVP.Promise(function(resolve, reject) {
+    var deletion = window.indexedDB.deleteDatabase(dbName);
+    deletion.onsuccess = function() {
+      resolve();
+    }
+    deletion.onerror = function() {
+      cl('Error deleting database ' + dbName);
+      reject();
+    }
+  });
+}

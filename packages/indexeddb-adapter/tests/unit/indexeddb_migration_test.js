@@ -2,7 +2,8 @@
 var get = Ember.get,
     App = {};
 
-var store, database, migration, mock;
+var store, database, migration, mock,
+    databaseName = "migrationTestDb";
 
 module('Unit/DS.IndexedDBMigration', {
   setup: function() {
@@ -20,13 +21,32 @@ module('Unit/DS.IndexedDBMigration', {
     });
 
     migration = TestMigration.create({
-      databaseName: "migrationTestDb"
+      databaseName: databaseName
     });
   }
 });
 
-test('#lastVersion', function() {
-  equal(migration.lastVersion(), 2, "Last version is correct");
+pending('#databaseInstance', function() {
+  stop();
+  var firstInstanceId;
+
+  deleteDatabase(databaseName).then(function() {
+    cl('deleted');
+    cl(migration.memoizedInstance);
+    migration.databaseInstance().then(function(connection) {
+      firstInstanceId = connection.get('id');
+      cl(firstInstanceId);
+
+      migration.databaseInstance().then(function(connection) {
+        equal(connection.get('id'), firstInstanceId, "Instance doesn't instantiate new DB");
+        start();
+      });
+    });
+  });
+});
+
+test('#migrationsLastVersion', function() {
+  equal(migration.migrationsLastVersion(), 2, "Last version is correct");
 });
 
 test('#runMigrations', function() {
@@ -40,8 +60,11 @@ test('#runMigrations', function() {
 
   migration = TestMigration.create();
 
-  migration.runMigrations()
-  equal(mock, "12", "Migrations were run in order");
+  stop();
+  migration.runMigrations(1).then(function() {
+    start();
+    equal(mock, "12", "Migrations were run in order");
+  });
 });
 
 test('#currentDbVersion', function() {
