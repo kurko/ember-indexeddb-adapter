@@ -15,12 +15,12 @@ module('Integration/DS.IndexedDBAdapter', {
       App.Person = DS.Model.extend({
         name: DS.attr('string'),
         cool: DS.attr('boolean'),
-        phones: DS.hasMany('phone', {async: true})
+        phones: DS.hasMany('phone')
       });
 
       App.Phone = DS.Model.extend({
         number: DS.attr('number'),
-        person: DS.belongsTo('person', {async: true})
+        person: DS.belongsTo('person')
       });
 
       App.Person.toString = function() { return "App.Person"; }
@@ -103,6 +103,41 @@ test('#createRecord should create records', function() {
       equal(get(person, 'cool'),  true,         'bool is loaded correctly');
       start();
     });
+  });
+
+  person.save();
+});
+
+test('#createRecord should include relationships', function() {
+  var person, phone;
+  expect(3);
+
+  stop();
+  person = store.createRecord('person', {
+    name: 'Billie Jean',
+    cool: true
+  });
+
+  person.on('didCreate', function(person) {
+    var personId = person.get('id');
+
+    cl(person);
+    phone = store.createRecord('phone', {
+      number: 1234,
+      person: person
+    });
+
+    phone.on('didCreate', function(phone) {
+      equal(get(phone, 'id'),     phone.id, 'phone id is loaded correctly');
+      equal(get(phone, 'number'), '1234',   'phone number is loaded correctly');
+
+      cl(phone.get('person'));
+      person = phone.get('person');
+      equal(get(person, 'id'), personId, 'person is associated correctly');
+      start();
+    });
+
+    phone.save();
   });
 
   person.save();

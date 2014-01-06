@@ -27,8 +27,7 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
       var modelName = type.toString(),
           connection, transaction, objectStore, findRequest;
 
-      connection = _this.openDatabase();
-      connection.then(function(db) {
+      _this.openDatabase().then(function(db) {
         transaction = db.transaction(modelName);
         objectStore = transaction.objectStore(modelName);
 
@@ -75,8 +74,7 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
     return new Ember.RSVP.Promise(function(resolve, reject) {
       var connection, transaction, objectStore, saveRequest;
 
-      connection = _this.openDatabase();
-      connection.then(function(db) {
+      _this.openDatabase().then(function(db) {
         /**
          * TODO: saving associations should open an appropriate transaction
          */

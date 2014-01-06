@@ -1,12 +1,14 @@
 Ember.ENV.TESTING = true;
+Ember.ENV.TESTING = true;
 
 const FIXTURES = {
   "App.Person": [
-    { id: "p1", name: "Rambo", cool: true },
+    { id: "p1", name: "Rambo", cool: true, phones: ['ph1', 'ph2'] },
     { id: "p2", name: "Bradock", cool: false }
   ],
   "App.Phone": [
-    { id: "ph1", number: "123" },
+    { id: "ph1", number: "11" },
+    { id: "ph2", number: "22" }
   ]
 };
 
