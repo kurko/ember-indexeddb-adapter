@@ -27,6 +27,7 @@
 
 	url = args[1];
 	page = require('webpage').create();
+  page.settings.clearMemoryCaches = true;
 	if (args[2] !== undefined) {
 		timeout = parseInt(args[2], 10);
 	}

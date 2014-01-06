@@ -99,7 +99,7 @@ pending = QUnit.pending;
 
 var deleteDatabase = function(dbName) {
   return new Ember.RSVP.Promise(function(resolve, reject) {
-    var deletion = window.indexedDB.deleteDatabase(dbName);
+    var deletion = indexedDB.deleteDatabase(dbName);
     deletion.onsuccess = function() {
       resolve();
     }
@@ -112,12 +112,21 @@ var deleteDatabase = function(dbName) {
 
 var openDatabase = function(dbName) {
   return new Ember.RSVP.Promise(function(resolve, reject) {
-    var request = window.indexedDB.open(dbName);
+    var request = indexedDB.open(dbName);
     request.onsuccess = function(event) {
+      var db = request.result;
+
+      db.onerror = function(event) {
+        // Generic error handler for all errors targeted at this database's requests
+        console.error(event.target);
+        console.log("Database error: " + event.target.wePutrrorMessage || event.target.error.name || event.target.error || event.target.errorCode);
+      }
+
       resolve(event.target.result);
     }
-    request.onerror = function() {
-      cl('Error opening database ' + dbName);
+
+    request.onerror = function(e) {
+      throw('openDatabase helper: Error opening database ' + dbName, e.target);
       reject(this);
     }
   });
@@ -131,27 +140,30 @@ var logSchema = function(dbName) {
 }
 
 var addDataToIDB = function(dbName, fixtures) {
-  return openDatabase(dbName).then(function(db) {
-    var transaction,
-        usedObjectStores = [];
+  return new Ember.RSVP.Promise(function(resolve, reject) {
+    openDatabase(dbName).then(function(db) {
+      var transaction,
+          usedObjectStores = [];
 
-    for(var model in fixtures) {
-      if (fixtures.hasOwnProperty(model))
-        usedObjectStores.pushObject(model);
-    }
+      for(var model in fixtures) {
+        if (fixtures.hasOwnProperty(model))
+          usedObjectStores.pushObject(model);
+      }
 
-    transaction = db.transaction(usedObjectStores, "readwrite");
+      // FIXME: this is freezing some times
+      transaction = db.transaction(usedObjectStores, "readwrite");
 
-    for (var model in fixtures) {
-      var records = fixtures[model],
-          objectStore = transaction.objectStore(model);
+      for (var model in fixtures) {
+        var records = fixtures[model],
+            objectStore = transaction.objectStore(model);
 
-      records.forEach(function(i) {
-        objectStore.add(i);
-      });
-    }
+        records.forEach(function(i) {
+          objectStore.add(i);
+        });
+      }
 
-    db.close();
-    return Ember.RSVP.resolve();
+      db.close();
+      resolve();
+    });
   });
 }

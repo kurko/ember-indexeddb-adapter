@@ -23,7 +23,7 @@ DS.IndexedDBMigration = Ember.Object.extend({
         _this.set('memoizedOpenDatabaseForUpgrade', null);
       }
 
-      connection.onerror = function() {
+      connection.onerror = function(e) {
         console.log('Failure connecting to database ' + _this.databaseName);
         reject();
       }

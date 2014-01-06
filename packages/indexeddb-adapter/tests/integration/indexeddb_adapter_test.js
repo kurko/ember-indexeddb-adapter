@@ -24,22 +24,30 @@ module('Integration/DS.IndexedDBAdapter', {
       App.Person.toString = function() { return "App.Person"; }
       App.Phone.toString  = function() { return "App.Phone"; }
 
-      var Adapter = DS.IndexedDBAdapter.extend({
-        databaseName: databaseName,
-        version: 1,
-        migrations: function() {
-          this.addModel(App.Person);
-          this.addModel(App.Phone);
-        }
+      var migrationsPromise = new Ember.RSVP.Promise(function(resolve, reject) {
+        var Adapter = DS.IndexedDBAdapter.extend({
+          databaseName: databaseName,
+          version: 1,
+          migrations: function() {
+            this.addModel(App.Person);
+            this.addModel(App.Phone);
+            resolve();
+          }
+        });
+
+        env = setupStore({
+          person: App.Person,
+          phone: App.Phone,
+          adapter: Adapter
+        });
+
+        store = env.store;
       });
 
-      env = setupStore({
-        person: App.Person,
-        phone: App.Phone,
-        adapter: Adapter
-      });
-
-      store = env.store;
+      return migrationsPromise;
+    }).then(function() {
+      return addDataToIDB(databaseName, FIXTURES);
+    }).then(function() {
       start();
     });
   }
@@ -53,14 +61,12 @@ test('should find records and then its relations asynchronously', function() {
   expect(3);
 
   stop();
-  addDataToIDB(databaseName, FIXTURES).then(function() {
-    store.find('person', 'p1').then(function(list) {
-      equal(get(list, 'id'),   'p1',    'id is loaded correctly');
-      equal(get(list, 'name'), 'Rambo', 'name is loaded correctly');
-      equal(get(list, 'cool'),  true,   'b is loaded correctly');
-      start();
-      //return list.get('phones');
-    });
+  store.find('person', 'p1').then(function(list) {
+    equal(get(list, 'id'),   'p1',    'id is loaded correctly');
+    equal(get(list, 'name'), 'Rambo', 'name is loaded correctly');
+    equal(get(list, 'cool'),  true,   'b is loaded correctly');
+    start();
+    //return list.get('phones');
   });
   /*
   .then(function(items) {
