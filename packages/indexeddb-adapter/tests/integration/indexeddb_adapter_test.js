@@ -2,11 +2,13 @@
 var get = Ember.get,
     App = {};
 
-var store, database, databaseName = "AdapterTest";
+var store, database, databaseName;
 
 module('Integration/DS.IndexedDBAdapter', {
   setup: function() {
     var env = {};
+
+    databaseName = "AdapterTest";
 
     stop();
     deleteDatabase(databaseName).then(function() {
@@ -57,16 +59,16 @@ test('existence', function() {
   ok(DS.IndexedDBAdapter, 'Adapter is defined');
 });
 
-test('should find records and then its relations asynchronously', function() {
+test('#find should find records and then its relations asynchronously', function() {
   expect(3);
 
   stop();
-  store.find('person', 'p1').then(function(list) {
-    equal(get(list, 'id'),   'p1',    'id is loaded correctly');
-    equal(get(list, 'name'), 'Rambo', 'name is loaded correctly');
-    equal(get(list, 'cool'),  true,   'b is loaded correctly');
+  store.find('person', 'p1').then(function(person) {
+    equal(get(person, 'id'),   'p1',    'id is loaded correctly');
+    equal(get(person, 'name'), 'Rambo', 'name is loaded correctly');
+    equal(get(person, 'cool'),  true,   'bool is loaded correctly');
     start();
-    //return list.get('phones');
+    //return person.get('phones');
   });
   /*
   .then(function(items) {
@@ -81,4 +83,27 @@ test('should find records and then its relations asynchronously', function() {
     start();
   });
  */
+});
+
+test('#createRecord should create records', function() {
+  expect(3);
+
+  stop();
+  var person = store.createRecord('person', {
+    name: 'Billie Jean',
+    cool: true
+  });
+
+  person.on('didCreate', function(savedPerson) {
+    var id = savedPerson.get('id');
+
+    store.find('person', id).then(function(person) {
+      equal(get(person, 'id'),   id,            'id is loaded correctly');
+      equal(get(person, 'name'), 'Billie Jean', 'name is loaded correctly');
+      equal(get(person, 'cool'),  true,         'bool is loaded correctly');
+      start();
+    });
+  });
+
+  person.save();
 });
