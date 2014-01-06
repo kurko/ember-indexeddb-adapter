@@ -2,22 +2,34 @@
 var get = Ember.get,
     App = {};
 
-var store, migration;
+var store, migration, databaseName = "MigrationTest";
 
 module('Integration/DS.IndexedDBMigration', {
   setup: function() {
-    var env = {};
+    stop();
+    deleteDatabase(databaseName).then(function() {
+      start();
+    });
+
+    App.Person = DS.Model.extend({
+      name: DS.attr('string'),
+      cool: DS.attr('boolean'),
+      phones: DS.hasMany('phone', {async: true})
+    });
+    App.Phone = DS.Model.extend({
+      number: DS.attr('number'),
+      person: DS.belongsTo('person', {async: true})
+    });
+
+    App.Person.toString = function() { return "App.Person"; }
+    App.Phone.toString  = function() { return "App.Phone"; }
 
     var MigrationTest = DS.IndexedDBMigration.extend({
-      databaseName: "MigrationTest",
-      migrations: [
-        function() {
-          cl(1);
-        },
-        function() {
-          cl(2);
-        }
-      ]
+      databaseName: databaseName,
+      version: 1,
+      migrations: function() {
+        this.addModel(App.Person);
+      }
     });
 
     migration = MigrationTest.create();
@@ -25,38 +37,49 @@ module('Integration/DS.IndexedDBMigration', {
 });
 
 test('should create the database and run migrations', function() {
-  var dbName = "MigrationTest",
-      mock = 0,
-      MigrationTest;
-
-  MigrationTest = DS.IndexedDBMigration.extend({
-    databaseName: dbName,
-    migrations: [
-      function() {
-        mock += 1;
-      },
-      function() {
-        mock += 2;
-      }
-    ]
-  });
-
-  migration = MigrationTest.create();
-
   stop();
-  deleteDatabase(dbName).then(function() {
-    migration.migrate().then(function() {
-      equal(mock, 3, "Two migrations were run");
-      return migration.currentDbVersion();
-    }).then(function(version) {
-      equal(version, 2, "Version is correct");
-      return migration.migrate();
-    }).then(function() {
-      equal(mock, 3, "No more migrations were run");
-      return migration.currentDbVersion();
-    }).then(function(version) {
-      equal(version, 2, "Version continues correct");
-      start();
+  deleteDatabase(databaseName).then(function() {
+    return migration.migrate();
+  }).then(function() {
+
+    return new Ember.RSVP.Promise(function(resolve, reject) {
+      var connection = indexedDB.open(databaseName);
+
+      connection.onsuccess = function() {
+        var storeNames = this.result.objectStoreNames;
+        this.result.close();
+
+        equal(storeNames.length, 1, "Only one objectStore was created");
+        equal(storeNames[0], "App.Person", "App.Person was created with success");
+        start();
+        resolve();
+      }
+    });
+  }).then(function() {
+    stop();
+    migration.set('version', 2);
+    migration.set('migrations', function() {
+      this.addModel(App.Person);
+      this.addModel(App.Phone);
+    });
+
+    return migration.migrate();
+  }).then(function() {
+
+    return new Ember.RSVP.Promise(function(resolve, reject) {
+      var connection = indexedDB.open(databaseName);
+
+      connection.onsuccess = function() {
+        var storeNames = this.result.objectStoreNames;
+        this.result.close();
+
+        equal(storeNames.length, 2, "A second objectStore was created");
+        equal(storeNames[0], "App.Person", "App.Person was created with success");
+        equal(storeNames[1], "App.Phone",  "App.Phone was created with success");
+        start();
+
+        resolve();
+      }
     });
   });
 });

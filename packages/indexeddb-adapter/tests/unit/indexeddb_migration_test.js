@@ -2,20 +2,23 @@
 var get = Ember.get,
     App = {};
 
-var store, database, migration, mock,
+var database, migration, mock,
     databaseName = "migrationTestDb";
 
 module('Unit/DS.IndexedDBMigration', {
   setup: function() {
-    var env = {};
-
-    database = window.indexedDB.open("AdapterTestDb", 1);
+    stop();
+    deleteDatabase(databaseName).then(function() {
+      start();
+    });
 
     var TestMigration = DS.IndexedDBMigration.extend({
       migrations: [
         function() {
+          this.addModel(App.Person);
         },
         function() {
+          this.addModel(App.Phone);
         }
       ]
     });
@@ -26,24 +29,20 @@ module('Unit/DS.IndexedDBMigration', {
   }
 });
 
-pending('#databaseInstance', function() {
-  stop();
-  var firstInstanceId;
-
-  deleteDatabase(databaseName).then(function() {
-    cl('deleted');
-    cl(migration.memoizedInstance);
-    migration.databaseInstance().then(function(connection) {
-      firstInstanceId = connection.get('id');
-      cl(firstInstanceId);
-
-      migration.databaseInstance().then(function(connection) {
-        equal(connection.get('id'), firstInstanceId, "Instance doesn't instantiate new DB");
-        start();
-      });
-    });
-  });
-});
+// test("#addModel creates a store for the passed in model", function() {
+//   stop();
+//   migration.addModel(App.Person).then(function() {
+//     cl('1');
+//     return openDatabase(databaseName);
+//   }).then(function(db) {
+//     cl('2');
+//     var stores = db.objectStoreNames;
+//     cl(stores);
+//     db.close();
+//     ok(stores.contains("App.Person"), "Person object store created");
+//     start();
+//   });
+// });
 
 test('#migrationsLastVersion', function() {
   equal(migration.migrationsLastVersion(), 2, "Last version is correct");
@@ -52,19 +51,16 @@ test('#migrationsLastVersion', function() {
 test('#runMigrations', function() {
   mock = "";
   var TestMigration = DS.IndexedDBMigration.extend({
-    migrations: [
-      function() { mock = mock + "1"; },
-      function() { mock = mock + "2"; }
-    ]
+    migrations: function() {
+      mock = mock + "1";
+      mock = mock + "2";
+    }
   });
 
   migration = TestMigration.create();
 
-  stop();
-  migration.runMigrations(1).then(function() {
-    start();
-    equal(mock, "12", "Migrations were run in order");
-  });
+  migration.runMigrations();
+  equal(mock, "12", "Migrations were run in order");
 });
 
 test('#currentDbVersion', function() {

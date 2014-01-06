@@ -1,5 +1,15 @@
 Ember.ENV.TESTING = true;
 
+const FIXTURES = {
+  "App.Person": [
+    { id: "p1", name: "Rambo", cool: true },
+    { id: "p2", name: "Bradock", cool: false }
+  ],
+  "App.Phone": [
+    { id: "ph1", number: "123" },
+  ]
+};
+
 var cl = function(msg) { console.log(msg); }
 var ct = function(msg) { console.table(msg); }
 
@@ -97,5 +107,51 @@ var deleteDatabase = function(dbName) {
       cl('Error deleting database ' + dbName);
       reject();
     }
+  });
+}
+
+var openDatabase = function(dbName) {
+  return new Ember.RSVP.Promise(function(resolve, reject) {
+    var request = window.indexedDB.open(dbName);
+    request.onsuccess = function(event) {
+      resolve(event.target.result);
+    }
+    request.onerror = function() {
+      cl('Error opening database ' + dbName);
+      reject(this);
+    }
+  });
+}
+
+var logSchema = function(dbName) {
+  return openDatabase(dbName).then(function(db) {
+    console.log(db.objectStoreNames);
+    return Ember.RSVP.resolve();
+  });
+}
+
+var addDataToIDB = function(dbName, fixtures) {
+  return openDatabase(dbName).then(function(db) {
+    var transaction,
+        usedObjectStores = [];
+
+    for(var model in fixtures) {
+      if (fixtures.hasOwnProperty(model))
+        usedObjectStores.pushObject(model);
+    }
+
+    transaction = db.transaction(usedObjectStores, "readwrite");
+
+    for (var model in fixtures) {
+      var records = fixtures[model],
+          objectStore = transaction.objectStore(model);
+
+      records.forEach(function(i) {
+        objectStore.add(i);
+      });
+    }
+
+    db.close();
+    return Ember.RSVP.resolve();
   });
 }

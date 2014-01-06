@@ -5,48 +5,28 @@
 DS.IndexedDBMigration = Ember.Object.extend({
   databaseName: "_default",
 
-  // databaseInstance: function(customVersion) {
-  //   var _this = this,
-  //       instance;
-
-  //   return new Ember.RSVP.Promise(function(resolve, reject) {
-  //     if (!_this.memoizedInstance) {
-
-  //       if (customVersion) {
-  //         connection = indexedDB.open(_this.databaseName, customVersion);
-  //       } else {
-  //         connection = indexedDB.open(_this.databaseName);
-  //       }
-
-  //       _this.memoizedInstance = Ember.Object.extend().create({
-  //         id: Math.random(),
-  //         version: customVersion,
-  //         connection: connection
-  //       });
-
-  //       resolve(_this.memoizedInstance);
-  //     } else {
-  //     }
-  //   });
-  // },
-  // memoizedInstance: null,
+  version: 1,
 
   migrate: function() {
-    var _this = this,
-        promise;
+    var _this = this;
 
     return new Ember.RSVP.Promise(function(resolve, reject) {
-      _this.isNewDatabase().then(function(isNewDatabase) {
-        if (isNewDatabase) {
-          _this.runMigrations(1).then(function() {
-            resolve(true);
-          });
-        } else {
-          _this.runMigrations().then(function() {
-            resolve(true);
-          });
-        }
-      });
+      var connection = indexedDB.open(_this.databaseName, _this.version);
+      connection.onsuccess = function() {
+        this.result.close();
+        resolve();
+      }
+
+      connection.onupgradeneeded = function() {
+        _this.set('memoizedOpenDatabaseForUpgrade', this.result);
+        _this.runMigrations();
+        _this.set('memoizedOpenDatabaseForUpgrade', null);
+      }
+
+      connection.onerror = function() {
+        console.log('Failure connecting to database ' + _this.databaseName);
+        reject();
+      }
     });
   },
 
@@ -73,79 +53,27 @@ DS.IndexedDBMigration = Ember.Object.extend({
     });
 
     return promise;
+  },
 
-    // currentDatabase.onupgradeneeded = function(event) {
-    //   var isCreating;
+  addModel: function(model) {
+    var db = this.memoizedOpenDatabaseForUpgrade,
+        modelName = model.toString(),
+        _this = this;
 
-    //   cl(event.target.result.version);
-    //   // if () {
+    if (!db.objectStoreNames.contains(modelName)) {
+      var objectStore = db.createObjectStore(modelName, { keyPath: "id" });
+    }
 
-    //   // }
-    //   cl('onupgradeneeded');
-    //   _this.runMigrations();
-    //   // var db = event.target.result;
-
-    //   // var objectStore = db.createObjectStore("customers", { keyPath: "ssn" });
-
-    //   // objectStore.createIndex("name", "name", { unique: false });
-    //   // objectStore.createIndex("email", "email", { unique: true });
-
-    //   // // Store values in the newly created objectStore.
-    //   // for (var i in customerData) {
-    //   //   objectStore.add(customerData[i]);
-    //   // }
-    // };
-    // currentDatabase.onsuccess = function() {
-    //   this.result.close();
-    // }
+    //objectStore.createIndex("name", "name", { unique: false });
+    //objectStore.createIndex("email", "email", { unique: true });
   },
 
   migrationsLastVersion: function() {
     return this.migrations.length;
   },
 
-  runMigrations: function(firstVersionToRun) {
-    var _this = this;
-
-    return new Ember.RSVP.Promise(function(resolve, reject) {
-      var versionPromise,
-          lastVersionRun;
-
-      versionPromise = new Ember.RSVP.Promise(function(versionResolve, reject) {
-        if (!firstVersionToRun) {
-          _this.currentDbVersion().then(function(currentVersion) {
-            firstVersionToRun = currentVersion + 1;
-            versionResolve(firstVersionToRun);
-          });
-        } else {
-          versionResolve(firstVersionToRun);
-        }
-      });
-
-      versionPromise.then(function(firstVersionToRun) {
-        _this.migrations.forEach(function(migration, index) {
-          var versionBeingRun = index + 1;
-
-          if (firstVersionToRun <= versionBeingRun) {
-            lastVersionRun = versionBeingRun;
-            migration.call(_this);
-          }
-        });
-
-        return Ember.RSVP.resolve();
-      }).then(function() {
-
-        if (lastVersionRun) {
-          var connection = indexedDB.open(_this.databaseName, lastVersionRun);
-          connection.onsuccess = function(event) {
-            this.result.close();
-            resolve();
-          }
-        } else {
-          resolve();
-        }
-      });
-    });
+  runMigrations: function() {
+    this.migrations.call(this);
   },
 
   currentDbVersion: function() {
@@ -164,4 +92,6 @@ DS.IndexedDBMigration = Ember.Object.extend({
     });
     return version;
   },
+
+  memoizedOpenDatabaseForUpgrade: null,
 });
