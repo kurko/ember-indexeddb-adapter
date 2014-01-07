@@ -225,20 +225,77 @@ test('#updateRecord should update records', function() {
 test('#deleteRecord delete a record', function() {
   expect(2);
   stop();
-  var AssertListIsDeleted = function() {
+  var AssertPersonIsDeleted = function() {
     return store.findQuery('person', { name: 'Rambo' }).then(function(records) {
       equal(get(records, 'length'), 0, "No record was found");
       start();
     });
   }
 
-  store.findQuery('person', { name: 'Rambo' }).then(function(lists) {
-    var person = lists.objectAt(0);
+  store.findQuery('person', { name: 'Rambo' }).then(function(people) {
+    var person = people.objectAt(0);
 
     equal(get(person, "id"), "p1", "Item exists before deleting it");
 
     person.deleteRecord();
-    person.on("didDelete", AssertListIsDeleted);
+    person.on("didDelete", AssertPersonIsDeleted);
     person.save();
+  });
+});
+
+test('changes in bulk', function() {
+  stop();
+  var promises,
+      personToUpdate = store.find('person', 'p1'),
+      personToDelete = store.find('person', 'p2'),
+      personToCreate = store.createRecord('person', { name: 'Rambo' });
+
+  var UpdatePerson = function(person) {
+    person.set('name', 'updated');
+    return person;
+  }
+
+  var DeletePerson = function(person) {
+    person.deleteRecord();
+    return person;
+  }
+
+  promises = [
+    personToCreate,
+    personToUpdate.then(UpdatePerson),
+    personToDelete.then(DeletePerson),
+  ];
+
+  Ember.RSVP.all(promises).then(function(people) {
+    promises = Ember.A();
+
+    people.forEach(function(person) {
+      promises.push(person.save());
+    });
+
+    return promises;
+  }).then(function() {
+    var updatedPerson = store.find('person', 'p1'),
+        createdPerson = store.findQuery('person', {name: 'Rambo'}),
+        promises      = Ember.A();
+
+    createdPerson.then(function(people) {
+      equal(get(people, 'length'), 1, "Record was created successfully");
+      promises.push(Ember.RSVP.Promise());
+    });
+
+    store.find('person', 'p2').then(function(person) {
+      equal(get(person, 'length'), undefined, "Record was deleted successfully");
+      promises.push(Ember.RSVP.Promise());
+    });
+
+    updatedPerson.then(function(person) {
+      equal(get(person, 'name'), 'updated', "Record was updated successfully");
+      promises.push(Ember.RSVP.Promise());
+    });
+
+    Ember.RSVP.all(promises).then(function() {
+      start();
+    });
   });
 });

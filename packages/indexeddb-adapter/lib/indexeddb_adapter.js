@@ -71,6 +71,11 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
             db.close();
           }
         }
+
+        cursor.onerror = function() {
+          reject(this.result);
+          db.close();
+        }
       });
     });
   },
@@ -133,6 +138,11 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
             db.close();
           }
         }
+
+        cursor.onerror = function() {
+          reject(this.result);
+          db.close();
+        }
       });
     });
   },
@@ -161,6 +171,11 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
             resolve(result);
             db.close();
           }
+        }
+
+        cursor.onerror = function() {
+          reject(this.result);
+          db.close();
         }
       });
     });
