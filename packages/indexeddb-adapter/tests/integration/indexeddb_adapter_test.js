@@ -15,7 +15,7 @@ module('Integration/DS.IndexedDBAdapter', {
       App.Person = DS.Model.extend({
         name: DS.attr('string'),
         cool: DS.attr('boolean'),
-        phones: DS.hasMany('phone')
+        phones: DS.hasMany('phone', {async: true})
       });
 
       App.Phone = DS.Model.extend({
@@ -60,29 +60,25 @@ test('existence', function() {
 });
 
 test('#find should find records and then its relations asynchronously', function() {
-  expect(3);
+  expect(7);
 
   stop();
   store.find('person', 'p1').then(function(person) {
     equal(get(person, 'id'),   'p1',    'id is loaded correctly');
     equal(get(person, 'name'), 'Rambo', 'name is loaded correctly');
     equal(get(person, 'cool'),  true,   'bool is loaded correctly');
-    start();
-    //return person.get('phones');
-  });
-  /*
-  .then(function(items) {
-    var item1 = items.get('firstObject'),
-        item2 = items.get('lastObject');
+    return person.get('phones');
+  }).then(function(phones) {
+    var phone1 = phones.get('firstObject'),
+        phone2 = phones.get('lastObject');
 
-    equal(get(item1, 'id'),   'i1',  'first item id is loaded correctly');
-    equal(get(item1, 'name'), 'one', 'first item name is loaded correctly');
-    equal(get(item2, 'id'),   'i2',  'first item id is loaded correctly');
-    equal(get(item2, 'name'), 'two', 'first item name is loaded correctly');
+    equal(get(phone1, 'id'),     'ph1', 'first phone id is loaded correctly');
+    equal(get(phone1, 'number'), '11',  'first phone number is loaded correctly');
+    equal(get(phone2, 'id'),     'ph2', 'second phone id is loaded correctly');
+    equal(get(phone2, 'number'), '22',  'second phone number is loaded correctly');
 
     start();
   });
- */
 });
 
 test('#createRecord should create records', function() {

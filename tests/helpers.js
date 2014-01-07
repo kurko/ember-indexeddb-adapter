@@ -4,7 +4,8 @@ Ember.ENV.TESTING = true;
 const FIXTURES = {
   "App.Person": [
     { id: "p1", name: "Rambo", cool: true, phones: ['ph1', 'ph2'] },
-    { id: "p2", name: "Bradock", cool: false }
+    { id: "p2", name: "Braddock", cool: false },
+    { id: "p3", name: "Billie Jack", cool: false }
   ],
   "App.Phone": [
     { id: "ph1", number: "11" },
@@ -33,13 +34,10 @@ var setupStore = function(options) {
   }));
 
   container.register('serializer:_default', DS.JSONSerializer);
-  container.register('serializer:_rest', DS.RESTSerializer);
-  container.register('adapter:_rest', DS.RESTAdapter);
 
   container.injection('serializer', 'store', 'store:main');
 
   env.serializer = container.lookup('serializer:_default');
-  env.restSerializer = container.lookup('serializer:_rest');
   env.store = container.lookup('store:main');
   env.adapter = env.store.get('defaultAdapter');
 

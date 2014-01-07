@@ -46,10 +46,33 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
   },
 
   findMany: function (store, type, ids) {
-    var records = Ember.A();
-    console.error("findMany not implemented");
+    var _this = this;
 
-    return Ember.RSVP.resolve(record);
+    return new Ember.RSVP.Promise(function(resolve, reject) {
+      var modelName = type.toString(),
+          result = [],
+          connection, transaction, objectStore, findRequest, cursor;
+
+      _this.openDatabase().then(function(db) {
+        transaction = db.transaction(modelName);
+        objectStore = transaction.objectStore(modelName);
+
+        cursor = objectStore.openCursor();
+        cursor.onsuccess = function(event) {
+          var cursor = event.target.result;
+
+          if (cursor) {
+            if (ids.contains(cursor.value.id)) {
+              result.push(cursor.value);
+            }
+            cursor.continue();
+          } else {
+            resolve(result);
+            db.close();
+          }
+        }
+      });
+    });
   },
 
   findQuery: function (store, type, query, recordArray) {
