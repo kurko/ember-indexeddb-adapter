@@ -138,10 +138,32 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
   },
 
   findAll: function (store, type) {
-    var records = Ember.A();
-    console.error("findAll not implemented");
+    var _this = this;
 
-    return Ember.RSVP.resolve(records);
+    return new Ember.RSVP.Promise(function(resolve, reject) {
+      var modelName = type.toString(),
+          result = [],
+          connection, transaction, objectStore, findRequest, cursor;
+
+      _this.openDatabase().then(function(db) {
+        transaction = db.transaction(modelName);
+        objectStore = transaction.objectStore(modelName);
+
+        cursor = objectStore.openCursor();
+        cursor.onsuccess = function(event) {
+          var cursor = event.target.result;
+
+          if (cursor) {
+            result.push(cursor.value);
+
+            cursor.continue();
+          } else {
+            resolve(result);
+            db.close();
+          }
+        }
+      });
+    });
   },
 
   createRecord: function (store, type, record) {

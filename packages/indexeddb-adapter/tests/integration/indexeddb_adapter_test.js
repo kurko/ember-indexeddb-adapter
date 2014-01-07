@@ -138,6 +138,26 @@ test('#createRecord should create records', function() {
   person.save();
 });
 
+test('#findAll returns all records', function() {
+  expect(4);
+
+  stop();
+  store.findAll('person').then(function(records) {
+    var firstRecord  = records.objectAt(0),
+        secondRecord = records.objectAt(1),
+        thirdRecord  = records.objectAt(2);
+
+    equal(get(records, 'length'), 3, "3 items were found");
+
+    equal(get(firstRecord,  'name'), "Rambo", "First item's name is one");
+    equal(get(secondRecord, 'name'), "Braddock", "Second item's name is two");
+    equal(get(thirdRecord,  'name'), "Billie Jack", "Third item's name is three");
+
+    start();
+  });
+});
+
+
 test('#createRecord should include relationships', function() {
   var person, phone;
   expect(3);
