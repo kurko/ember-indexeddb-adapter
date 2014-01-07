@@ -81,6 +81,40 @@ test('#find should find records and then its relations asynchronously', function
   });
 });
 
+test('#findQuery should find records using queries', function() {
+  expect(5);
+
+  stop();
+  store.findQuery('person', {name: /rambo|braddock/i}).then(function(records) {
+    equal(get(records, 'length'), 2, 'found results for /rambo|braddock/i');
+    start();
+  });
+
+  stop();
+  store.findQuery('person', {name: /.+/, id: /p1/}).then(function(records) {
+    equal(get(records, 'length'), 1, 'found results for {name: /.+/, id: /p1/}');
+    start();
+  });
+
+  stop();
+  store.findQuery('person', {name: 'Rambo'}).then(function(records) {
+    equal(get(records, 'length'), 1, 'found results for name "Rambo"');
+    start();
+  });
+
+  stop();
+  store.findQuery('person', {cool: true}).then(function(records) {
+    equal(get(records, 'length'), 1, 'found results for {cool: true}');
+    start();
+  });
+
+  stop();
+  store.findQuery('person', {whatever: "dude"}).then(function(records) {
+    equal(get(records, 'length'), 0, 'didn\'t find results for nonsense');
+    start();
+  });
+});
+
 test('#createRecord should create records', function() {
   expect(3);
 

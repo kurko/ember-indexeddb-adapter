@@ -76,10 +76,65 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
   },
 
   findQuery: function (store, type, query, recordArray) {
-    var records = Ember.A();
-    console.error("findQuery not implemented");
+    var _this = this;
 
-    return Ember.RSVP.resolve(records);
+    return new Ember.RSVP.Promise(function(resolve, reject) {
+      var modelName = type.toString(),
+          result = [],
+          connection, transaction, objectStore, findRequest, cursor;
+
+      _this.openDatabase().then(function(db) {
+        transaction = db.transaction(modelName);
+        objectStore = transaction.objectStore(modelName);
+
+        cursor = objectStore.openCursor();
+        cursor.onsuccess = function(event) {
+          var cursor = event.target.result,
+              isMatch;
+
+          if (cursor) {
+            for (var field in query) {
+              var queryString = query[field],
+                  queriedField = cursor.value[field];
+
+              /**
+               * If it was already defined that the current record doesn't match
+               * the query, leave the search.
+               */
+              if (typeof isMatch === false) {
+                break;
+              }
+
+              /**
+               * If the query param is a Regex
+               */
+              if (Object.prototype.toString.call(queryString).match("RegExp")) {
+                if (new RegExp(queryString).test(queriedField)) {
+                  isMatch = true;
+                } else {
+                  isMatch = false;
+                }
+              } else {
+                if (queriedField === queryString) {
+                  isMatch = true;
+                } else {
+                  isMatch = false;
+                }
+              }
+            }
+
+            if (isMatch === true) {
+              result.push(cursor.value);
+            }
+
+            cursor.continue();
+          } else {
+            resolve(result);
+            db.close();
+          }
+        }
+      });
+    });
   },
 
   findAll: function (store, type) {
