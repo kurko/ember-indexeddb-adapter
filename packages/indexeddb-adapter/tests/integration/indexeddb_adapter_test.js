@@ -221,3 +221,24 @@ test('#updateRecord should update records', function() {
   person.save().then(UpdatePerson)
                .then(AssertPersonIsUpdated);
 });
+
+test('#deleteRecord delete a record', function() {
+  expect(2);
+  stop();
+  var AssertListIsDeleted = function() {
+    return store.findQuery('person', { name: 'Rambo' }).then(function(records) {
+      equal(get(records, 'length'), 0, "No record was found");
+      start();
+    });
+  }
+
+  store.findQuery('person', { name: 'Rambo' }).then(function(lists) {
+    var person = lists.objectAt(0);
+
+    equal(get(person, "id"), "p1", "Item exists before deleting it");
+
+    person.deleteRecord();
+    person.on("didDelete", AssertListIsDeleted);
+    person.save();
+  });
+});

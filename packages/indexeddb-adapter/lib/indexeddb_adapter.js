@@ -252,8 +252,43 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
   },
 
   deleteRecord: function (store, type, record) {
-    console.error("deleteRecord not implemented");
-    return Ember.RSVP.resolve();
+    var _this = this;
+
+    return new Ember.RSVP.Promise(function(resolve, reject) {
+      var modelName = type.toString(),
+          serializedRecord = record.serialize({includeId: true}),
+          id = serializedRecord.id,
+          connection, transaction, objectStore, operation;
+
+      _this.openDatabase().then(function(db) {
+        transaction = db.transaction(modelName, "readwrite");
+
+        transaction.onerror = function(event) {
+          if (Ember.ENV.TESTING) {
+            console.error('transaction error: ' + event);
+          }
+        }
+
+        transaction.onabort = function(event) {
+          if (Ember.ENV.TESTING) {
+            console.error('transaction aborted: ' + event);
+          }
+        }
+
+        objectStore = transaction.objectStore(modelName);
+
+        operation = objectStore.delete(id);
+        operation.onsuccess = function(event) {
+          resolve(serializedRecord);
+          db.close();
+        };
+
+        operation.onerror = function(event) {
+          reject(this.result);
+          db.close();
+        };
+      });
+    });
   },
 
   generateIdForRecord: function () {
