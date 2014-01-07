@@ -190,3 +190,34 @@ test('#createRecord should include relationships', function() {
 
   person.save();
 });
+
+test('#updateRecord should update records', function() {
+  expect(4);
+  stop();
+  person = store.createRecord('person', { name: 'Miyagi' });
+
+  var UpdatePerson = function(person) {
+    return store.findQuery('person', { name: 'Miyagi' }).then(function(records) {
+      var record = records.objectAt(0);
+      record.set('name', 'Macgyver');
+      return record.save();
+    });
+  }
+
+  var AssertPersonIsUpdated = function() {
+    return store.findQuery('person', { name: 'Macgyver' }).then(function(records) {
+      var record = records.objectAt(0);
+
+      equal(get(records, 'length'), 1,         "Only one record was found");
+      equal(get(record,  'name'),  "Macgyver", "Updated name shows up");
+
+      ok(get(record,  'id'),    "An actual truthy id was saved");
+      equal(get(record,  'id'), person.get('id'), "Original id was used");
+
+      start();
+    });
+  }
+
+  person.save().then(UpdatePerson)
+               .then(AssertPersonIsUpdated);
+});

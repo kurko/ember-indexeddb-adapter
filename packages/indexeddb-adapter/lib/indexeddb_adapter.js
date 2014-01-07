@@ -38,7 +38,7 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
         };
 
         findRequest.onerror = function(event) {
-          resolve(this.result);
+          reject(this.result);
           db.close();
         };
       });
@@ -212,8 +212,43 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
   },
 
   updateRecord: function (store, type, record) {
-    console.error("updateRecord not implemented");
-    return Ember.RSVP.resolve();
+    var _this = this,
+        serializedRecord = record.serialize({includeId: true});
+
+    return new Ember.RSVP.Promise(function(resolve, reject) {
+      var modelName = type.toString(),
+          id = record.id,
+          connection, transaction, objectStore, putRequest;
+
+      _this.openDatabase().then(function(db) {
+        transaction = db.transaction(modelName, "readwrite");
+
+        transaction.onerror = function(event) {
+          if (Ember.ENV.TESTING) {
+            console.error('transaction error: ' + event);
+          }
+        }
+
+        transaction.onabort = function(event) {
+          if (Ember.ENV.TESTING) {
+            console.error('transaction aborted: ' + event);
+          }
+        }
+
+        objectStore = transaction.objectStore(modelName);
+
+        putRequest = objectStore.put(serializedRecord);
+        putRequest.onsuccess = function(event) {
+          resolve(serializedRecord);
+          db.close();
+        };
+
+        putRequest.onerror = function(event) {
+          reject(this.result);
+          db.close();
+        };
+      });
+    });
   },
 
   deleteRecord: function (store, type, record) {
