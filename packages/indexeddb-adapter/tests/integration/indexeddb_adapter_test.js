@@ -117,7 +117,6 @@ test('#createRecord should include relationships', function() {
   person.on('didCreate', function(person) {
     var personId = person.get('id');
 
-    cl(person);
     phone = store.createRecord('phone', {
       number: 1234,
       person: person
@@ -127,7 +126,6 @@ test('#createRecord should include relationships', function() {
       equal(get(phone, 'id'),     phone.id, 'phone id is loaded correctly');
       equal(get(phone, 'number'), '1234',   'phone number is loaded correctly');
 
-      cl(phone.get('person'));
       person = phone.get('person');
       equal(get(person, 'id'), personId, 'person is associated correctly');
       start();

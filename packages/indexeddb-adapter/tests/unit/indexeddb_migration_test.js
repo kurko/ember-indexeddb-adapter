@@ -44,10 +44,6 @@ module('Unit/DS.IndexedDBMigration', {
 //   });
 // });
 
-test('#migrationsLastVersion', function() {
-  equal(migration.migrationsLastVersion(), 2, "Last version is correct");
-});
-
 test('#runMigrations', function() {
   mock = "";
   var TestMigration = DS.IndexedDBMigration.extend({
