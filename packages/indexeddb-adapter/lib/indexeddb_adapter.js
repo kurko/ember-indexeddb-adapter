@@ -20,20 +20,34 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
     @param {DS.Model} type
     @param {Object|String|Integer|null} id
     */
-  find: function (store, type, id) {
-    var _this = this;
+  find: function (store, type, id, opts) {
+    var adapter = this,
+        allowRecursive = true;
+
+    if (opts && typeof opts.allowRecursive !== 'undefined') {
+      allowRecursive = opts.allowRecursive;
+    }
 
     return new Ember.RSVP.Promise(function(resolve, reject) {
       var modelName = type.toString(),
           connection, transaction, objectStore, findRequest;
 
-      _this.openDatabase().then(function(db) {
+      adapter.openDatabase().then(function(db) {
         transaction = db.transaction(modelName);
         objectStore = transaction.objectStore(modelName);
 
         findRequest = objectStore.get(id);
         findRequest.onsuccess = function(event) {
-          resolve(this.result);
+          var record = this.result;
+
+          if (allowRecursive) {
+            adapter.loadRelationships(type, record).then(function(finalRecord) {
+              resolve(finalRecord);
+            });
+          } else {
+            resolve(record);
+          }
+
           db.close();
         };
 
@@ -46,14 +60,14 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
   },
 
   findMany: function (store, type, ids) {
-    var _this = this;
+    var adapter = this;
 
     return new Ember.RSVP.Promise(function(resolve, reject) {
       var modelName = type.toString(),
           result = [],
           connection, transaction, objectStore, findRequest, cursor;
 
-      _this.openDatabase().then(function(db) {
+      adapter.openDatabase().then(function(db) {
         transaction = db.transaction(modelName);
         objectStore = transaction.objectStore(modelName);
 
@@ -61,10 +75,8 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
         cursor.onsuccess = function(event) {
           var cursor = event.target.result;
 
-          if (cursor) {
-            if (ids.contains(cursor.value.id)) {
-              result.push(cursor.value);
-            }
+          if (cursor && ids.contains(cursor.value.id)) {
+            result.push(cursor.value);
             cursor.continue();
           } else {
             resolve(result);
@@ -81,14 +93,14 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
   },
 
   findQuery: function (store, type, query, recordArray) {
-    var _this = this;
+    var adapter = this;
 
     return new Ember.RSVP.Promise(function(resolve, reject) {
       var modelName = type.toString(),
           result = [],
           connection, transaction, objectStore, findRequest, cursor;
 
-      _this.openDatabase().then(function(db) {
+      adapter.openDatabase().then(function(db) {
         transaction = db.transaction(modelName);
         objectStore = transaction.objectStore(modelName);
 
@@ -144,6 +156,12 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
           db.close();
         }
       });
+    }).then(function(records) {
+      if (records.get('length')) {
+        return adapter.loadRelationshipsForMany(type, records);
+      } else {
+        return records;
+      }
     });
   },
 
@@ -325,5 +343,105 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
         reject(this);
       }
     });
+  },
+
+  modelRelationships: function(type) {
+    return Ember.get(type, 'relationshipNames');
+  },
+
+  loadRelationships: function(type, record) {
+    var adapter = this;
+
+    return new Ember.RSVP.Promise(function(resolve, reject) {
+      var resultJSON = {},
+          typeKey = type.typeKey,
+          relationships,
+          relationshipPromises = [];
+
+      relationships = adapter.modelRelationships(type).belongsTo;
+      relationships.push.apply(relationships, adapter.modelRelationships(type).hasMany);
+
+      relationships.forEach(function(relationName) {
+        var relationModel = type.typeForRelationship(relationName),
+            relationId    = record[relationName],
+            relationType  = adapter.typeRelationshipKind(type, relationName),
+            promise;
+
+        if (relationId) {
+          var opts = {allowRecursive: false};
+
+          if (relationType == 'belongsTo' || relationType == 'hasOne') {
+            promise = adapter.find(store, relationModel, relationId, opts)
+          } else if (relationType == 'hasMany') {
+            promise = adapter.findMany(store, relationModel, relationId, opts)
+          }
+
+          promise.then(function(relationRecord) {
+            if (relationRecord) {
+              if (!record['_embedded']) {
+                record['_embedded'] = {}
+              }
+
+              record['_embedded'][relationName] = relationRecord;
+            }
+          });
+
+          relationshipPromises.push(promise);
+        }
+      });
+
+      Ember.RSVP.all(relationshipPromises).then(function() {
+        resolve(record);
+      });
+    });
+  },
+
+  loadRelationshipsForMany: function(type, recordsArray) {
+    var adapter = this;
+
+    return new Ember.RSVP.Promise(function(resolve, reject) {
+      var recordsWithRelationships = [],
+          recordsToBeLoaded = [],
+          promises = [];
+
+      /**
+       * Some times Ember puts some stuff in arrays. We want to clean it so
+       * we know exactly what to iterate over.
+       */
+      for (var i in recordsArray) {
+        if (recordsArray.hasOwnProperty(i)) {
+          recordsToBeLoaded.push(recordsArray[i]);
+        }
+      }
+
+      var loadNextRecord = function(record) {
+        /**
+         * Removes the first item from recordsToBeLoaded
+         */
+        recordsToBeLoaded = recordsToBeLoaded.slice(1);
+
+        var promise = adapter.loadRelationships(type, record);
+
+        promise.then(function(recordWithRelationships) {
+          recordsWithRelationships.push(recordWithRelationships);
+
+          if (recordsToBeLoaded[0]) {
+            loadNextRecord(recordsToBeLoaded[0]);
+          } else {
+            resolve(recordsWithRelationships);
+          }
+        });
+      }
+
+      /**
+       * We start by the first record
+       */
+      loadNextRecord(recordsToBeLoaded[0]);
+    });
+  },
+
+  typeRelationshipKind: function(type, relationName) {
+    var relationships = Ember.get(type, 'relationshipsByName');
+    return relationships.get(relationName).kind;
   }
 });

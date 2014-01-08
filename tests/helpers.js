@@ -8,7 +8,7 @@ const FIXTURES = {
     { id: "p3", name: "Billie Jack", cool: false }
   ],
   "App.Phone": [
-    { id: "ph1", number: "11" },
+    { id: "ph1", number: "11", person: "p1" },
     { id: "ph2", number: "22" }
   ]
 };
@@ -33,7 +33,7 @@ var setupStore = function(options) {
     adapter: adapter
   }));
 
-  container.register('serializer:_default', DS.JSONSerializer);
+  container.register('serializer:_default', DS.IndexedDBSerializer);
 
   container.injection('serializer', 'store', 'store:main');
 

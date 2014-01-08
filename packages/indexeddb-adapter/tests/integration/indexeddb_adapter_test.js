@@ -1,4 +1,3 @@
-// global variables
 var get = Ember.get,
     App = {};
 
@@ -15,7 +14,7 @@ module('Integration/DS.IndexedDBAdapter', {
       App.Person = DS.Model.extend({
         name: DS.attr('string'),
         cool: DS.attr('boolean'),
-        phones: DS.hasMany('phone', {async: true})
+        phones: DS.hasMany('phone')
       });
 
       App.Phone = DS.Model.extend({
@@ -59,7 +58,7 @@ test('existence', function() {
   ok(DS.IndexedDBAdapter, 'Adapter is defined');
 });
 
-test('#find should find records and then its relations asynchronously', function() {
+test('#find should find records and then its relations', function() {
   expect(7);
 
   stop();
@@ -82,7 +81,7 @@ test('#find should find records and then its relations asynchronously', function
 });
 
 test('#findQuery should find records using queries', function() {
-  expect(5);
+  expect(4);
 
   stop();
   store.findQuery('person', {name: /rambo|braddock/i}).then(function(records) {
@@ -107,10 +106,33 @@ test('#findQuery should find records using queries', function() {
     equal(get(records, 'length'), 1, 'found results for {cool: true}');
     start();
   });
+});
 
+test('#findQuery should not return anything if nothing is found', function() {
+  expect(1);
   stop();
   store.findQuery('person', {whatever: "dude"}).then(function(records) {
     equal(get(records, 'length'), 0, 'didn\'t find results for nonsense');
+    start();
+  });
+});
+
+test('#findQuery should include relationships', function() {
+  expect(3);
+
+  stop();
+
+  store.findQuery('person', {name: 'Rambo'}).then(function(records) {
+    var rambo = records.objectAt(0),
+        phone = rambo.get('phones'),
+        phone1 = phone.objectAt(0),
+        phone2 = phone.objectAt(1);
+
+    equal(get(records, 'length'), 1, 'found results for name "Rambo"');
+
+    equal(get(phone1, 'number'), 11, 'related phone1 is loaded');
+    equal(get(phone2, 'number'), 22, 'related phone2 is loaded');
+
     start();
   });
 });
@@ -138,26 +160,6 @@ test('#createRecord should create records', function() {
   person.save();
 });
 
-test('#findAll returns all records', function() {
-  expect(4);
-
-  stop();
-  store.findAll('person').then(function(records) {
-    var firstRecord  = records.objectAt(0),
-        secondRecord = records.objectAt(1),
-        thirdRecord  = records.objectAt(2);
-
-    equal(get(records, 'length'), 3, "3 items were found");
-
-    equal(get(firstRecord,  'name'), "Rambo", "First item's name is one");
-    equal(get(secondRecord, 'name'), "Braddock", "Second item's name is two");
-    equal(get(thirdRecord,  'name'), "Billie Jack", "Third item's name is three");
-
-    start();
-  });
-});
-
-
 test('#createRecord should include relationships', function() {
   var person, phone;
   expect(3);
@@ -180,6 +182,7 @@ test('#createRecord should include relationships', function() {
       equal(get(phone, 'id'),     phone.id, 'phone id is loaded correctly');
       equal(get(phone, 'number'), '1234',   'phone number is loaded correctly');
 
+      // TODO this is broken because of Ember Data current bugs
       person = phone.get('person');
       equal(get(person, 'id'), personId, 'person is associated correctly');
       start();
@@ -189,6 +192,25 @@ test('#createRecord should include relationships', function() {
   });
 
   person.save();
+});
+
+test('#findAll returns all records', function() {
+  expect(4);
+
+  stop();
+  store.findAll('person').then(function(records) {
+    var firstRecord  = records.objectAt(0),
+        secondRecord = records.objectAt(1),
+        thirdRecord  = records.objectAt(2);
+
+    equal(get(records, 'length'), 3, "3 items were found");
+
+    equal(get(firstRecord,  'name'), "Rambo", "First item's name is one");
+    equal(get(secondRecord, 'name'), "Braddock", "Second item's name is two");
+    equal(get(thirdRecord,  'name'), "Billie Jack", "Third item's name is three");
+
+    start();
+  });
 });
 
 test('#updateRecord should update records', function() {
@@ -297,5 +319,26 @@ test('changes in bulk', function() {
     Ember.RSVP.all(promises).then(function() {
       start();
     });
+  });
+});
+
+test('#find returns hasMany association', function() {
+  stop();
+  store.find('person', 'p1').then(function(person) {
+    var phones = person.get('phones');
+    equal(get(phones, 'length'), 2, "associated phones are loaded successfully");
+    start();
+  });
+});
+
+test('load belongsTo association when {async: false}', function() {
+  expect(2);
+  stop();
+  store.find('phone', 'ph1').then(function(phone) {
+    var person = phone.get('person');
+
+    equal(get(person, 'id'),   "p1",    "person id is correct");
+    equal(get(person, 'name'), "Rambo", "person name is correct");
+    start();
   });
 });
