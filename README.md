@@ -2,7 +2,7 @@ Ember Data IndexedDB Adapter
 ================================
 
 Store your Ember application data in IndexedDB. Compatible with Ember Data 1.0.0-beta5+.
-Fully tested, used in a real world app.
+Fully tested. Not yet ready for production apps.
 
 Note: PhantomJS (1.9.3) doesn't support IndexedDB. IndexedDBShim.js doesn't work
 on it either, so I'm running tests only in the browser for now.
