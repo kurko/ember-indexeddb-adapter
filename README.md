@@ -70,7 +70,8 @@ Tests
 Run `rackup` in your terminal (make sure you have Ruby installed). Then visit
 `http://localhost:9292` in your browser.
 
-Note: PhantomJS (1.9.3) doesn't support IndexedDB. IndexedDBShim.js doesn't work
+Please, disregard Travis CI for now because PhantomJS (1.9.3) doesn't support
+IndexedDB. IndexedDBShim.js doesn't work
 on it either, so I'm running tests only in the browser for now. Once version 2
 is here, just use `phantomjs tests/runner.js tests/index.html` in your terminal.
 
