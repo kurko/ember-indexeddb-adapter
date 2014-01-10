@@ -1,5 +1,5 @@
 Ember.ENV.TESTING = true;
-Ember.ENV.TESTING = true;
+Ember.testing = true;
 
 const FIXTURES = {
   "App.Person": [
@@ -60,25 +60,27 @@ DS.JSONSerializer.reopen({
 
 var setDatabaseSchema = function() {
   request.onupgradeneeded = function(event) {
-    var db = event.target.result;
+    Em.run(function() {
+      var db = event.target.result;
 
-    // Create an objectStore to hold information about our customers. We're
-    // going to use "ssn" as our key path because it's guaranteed to be
-    // unique.
-    var objectStore = db.createObjectStore("customers", { keyPath: "ssn" });
+      // Create an objectStore to hold information about our customers. We're
+      // going to use "ssn" as our key path because it's guaranteed to be
+      // unique.
+      var objectStore = db.createObjectStore("customers", { keyPath: "ssn" });
 
-    // Create an index to search customers by name. We may have duplicates
-    // so we can't use a unique index.
-    objectStore.createIndex("name", "name", { unique: false });
+      // Create an index to search customers by name. We may have duplicates
+      // so we can't use a unique index.
+      objectStore.createIndex("name", "name", { unique: false });
 
-    // Create an index to search customers by email. We want to ensure that
-    // no two customers have the same email, so use a unique index.
-    objectStore.createIndex("email", "email", { unique: true });
+      // Create an index to search customers by email. We want to ensure that
+      // no two customers have the same email, so use a unique index.
+      objectStore.createIndex("email", "email", { unique: true });
 
-    // Store values in the newly created objectStore.
-    for (var i in customerData) {
-      objectStore.add(customerData[i]);
-    }
+      // Store values in the newly created objectStore.
+      for (var i in customerData) {
+        objectStore.add(customerData[i]);
+      }
+    });
   };
 }
 
@@ -101,11 +103,15 @@ var deleteDatabase = function(dbName) {
   return new Ember.RSVP.Promise(function(resolve, reject) {
     var deletion = indexedDB.deleteDatabase(dbName);
     deletion.onsuccess = function() {
-      resolve();
+      Em.run(function() {
+        resolve();
+      });
     }
     deletion.onerror = function() {
-      cl('Error deleting database ' + dbName);
-      reject();
+      Em.run(function() {
+        cl('Error deleting database ' + dbName);
+        reject();
+      });
     }
   });
 }
@@ -114,20 +120,26 @@ var openDatabase = function(dbName) {
   return new Ember.RSVP.Promise(function(resolve, reject) {
     var request = indexedDB.open(dbName);
     request.onsuccess = function(event) {
-      var db = request.result;
+      Em.run(function() {
+        var db = request.result;
 
-      db.onerror = function(event) {
-        // Generic error handler for all errors targeted at this database's requests
-        console.error(event.target);
-        console.log("Database error: " + event.target.wePutrrorMessage || event.target.error.name || event.target.error || event.target.errorCode);
-      }
+        db.onerror = function(event) {
+          Em.run(function() {
+            // Generic error handler for all errors targeted at this database's requests
+            console.error(event.target);
+            console.log("Database error: " + event.target.wePutrrorMessage || event.target.error.name || event.target.error || event.target.errorCode);
+          });
+        }
 
-      resolve(event.target.result);
+        resolve(event.target.result);
+      });
     }
 
-    request.onerror = function(e) {
-      throw('openDatabase helper: Error opening database ' + dbName, e.target);
-      reject(this);
+    request.onerror = function(event) {
+      Em.run(function() {
+        throw('openDatabase helper: Error opening database ' + dbName, event.target);
+        reject(event.target);
+      });
     }
   });
 }
@@ -158,12 +170,16 @@ var addDataToIDB = function(dbName, fixtures) {
             objectStore = transaction.objectStore(model);
 
         records.forEach(function(i) {
-          objectStore.add(i);
+          Em.run(function() {
+            objectStore.add(i);
+          });
         });
       }
 
-      db.close();
-      resolve();
+      Em.run(function() {
+        db.close();
+        resolve();
+      });
     });
   });
 }

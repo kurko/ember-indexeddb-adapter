@@ -6,6 +6,8 @@ var store, migration, databaseName = "MigrationTest";
 
 module('Integration/DS.IndexedDBMigration', {
   setup: function() {
+    Em.run.begin();
+
     stop();
     deleteDatabase(databaseName).then(function() {
       start();
@@ -33,26 +35,36 @@ module('Integration/DS.IndexedDBMigration', {
     });
 
     migration = MigrationTest.create();
+  },
+
+  teardown: function() {
+    Em.run.end();
   }
 });
 
 test('should create the database and run migrations', function() {
   stop();
   deleteDatabase(databaseName).then(function() {
-    return migration.migrate();
+    return Em.run(function() {
+      return migration.migrate();
+    });
   }).then(function() {
 
     return new Ember.RSVP.Promise(function(resolve, reject) {
       var connection = indexedDB.open(databaseName);
 
       connection.onsuccess = function() {
-        var storeNames = this.result.objectStoreNames;
-        this.result.close();
+        var _this = this;
 
-        equal(storeNames.length, 1, "Only one objectStore was created");
-        equal(storeNames[0], "App.Person", "App.Person was created with success");
-        start();
-        resolve();
+        Em.run(function() {
+          var storeNames = _this.result.objectStoreNames;
+          _this.result.close();
+
+          equal(storeNames.length, 1, "Only one objectStore was created");
+          equal(storeNames[0], "App.Person", "App.Person was created with success");
+          start();
+          resolve();
+        });
       }
     });
   }).then(function() {
@@ -70,15 +82,19 @@ test('should create the database and run migrations', function() {
       var connection = indexedDB.open(databaseName);
 
       connection.onsuccess = function() {
-        var storeNames = this.result.objectStoreNames;
-        this.result.close();
+        var _this = this;
 
-        equal(storeNames.length, 2, "A second objectStore was created");
-        equal(storeNames[0], "App.Person", "App.Person was created with success");
-        equal(storeNames[1], "App.Phone",  "App.Phone was created with success");
-        start();
+        Em.run(function() {
+          var storeNames = _this.result.objectStoreNames;
+          _this.result.close();
 
-        resolve();
+          equal(storeNames.length, 2, "A second objectStore was created");
+          equal(storeNames[0], "App.Person", "App.Person was created with success");
+          equal(storeNames[1], "App.Phone",  "App.Phone was created with success");
+          start();
+
+          resolve();
+        });
       }
     });
   });

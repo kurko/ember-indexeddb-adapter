@@ -66,7 +66,9 @@ test('#currentDbVersion', function() {
     var deletion = window.indexedDB.deleteDatabase("migrationTestDb");
 
     deletion.onsuccess = function() {
-      resolve();
+      Em.run(function() {
+        resolve();
+      });
     }
   });
 
@@ -76,8 +78,12 @@ test('#currentDbVersion', function() {
       var db1 = indexedDB.open("migrationTestDb", 1);
 
       db1.onsuccess = function() {
-        this.result.close();
-        resolve();
+        var _this = this;
+
+        Em.run(function() {
+          _this.result.close();
+          resolve();
+        });
       }
     });
 
@@ -85,9 +91,12 @@ test('#currentDbVersion', function() {
 
     return new Ember.RSVP.Promise(function(resolve, reject) {
       var db999 = indexedDB.open("migrationTestDb", 999);
-      db999.onsuccess = function() {
-        this.result.close();
-        resolve();
+
+      db999.onsuccess = function(event) {
+        Em.run(function() {
+          event.target.result.close();
+          resolve();
+        });
       }
     });
 
@@ -114,7 +123,9 @@ test('#currentDbVersion', function() {
       var deletion = window.indexedDB.deleteDatabase("migrationTestDb");
 
       deletion.onsuccess = function() {
-        resolve();
+        Em.run(function() {
+          resolve();
+        });
       }
     });
 
@@ -126,15 +137,17 @@ test('#currentDbVersion', function() {
     db2.onsuccess = function() {
       var _this = this;
 
-      migration = DS.IndexedDBMigration.extend().create({
-        databaseName: "migrationTestDb"
-      });
+      Em.run(function() {
+        migration = DS.IndexedDBMigration.extend().create({
+          databaseName: "migrationTestDb"
+        });
 
-      version = migration.currentDbVersion();
-      version.then(function(v) {
-        equal(v, 2, "The current version is correct after DB was reset");
-        start();
-        _this.result.close();
+        version = migration.currentDbVersion();
+        version.then(function(v) {
+          equal(v, 2, "The current version is correct after DB was reset");
+          start();
+          _this.result.close();
+        });
       });
     }
   });

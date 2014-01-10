@@ -1,22 +1,68 @@
 Ember Data IndexedDB Adapter
 ================================
 
-Store your Ember application data in IndexedDB. Compatible with Ember Data 1.0.0-beta5+.
-Fully tested. Not yet ready for production apps.
-
-Note: PhantomJS (1.9.3) doesn't support IndexedDB. IndexedDBShim.js doesn't work
-on it either, so I'm running tests only in the browser for now.
+Store your Ember application data offline with IndexedDB.
+Compatible with Ember Data 1.0.0-beta5+.
+Fully tested.
 
 Usage
 -----
 
-Include `indexeddb_adapter.js` in your app and then like all adapters:
+Download the latest distribution and then use it like this:
 
 ```js
+App.ApplicationSerializer = DS.IndexedDBSerializer.extend();
 App.ApplicationAdapter = DS.IndexedDBAdapter.extend({
-  databaseName: 'app_namespace'
+  databaseName: 'some_database_name'
+  version: 1,
+  migrations: function() {
+    this.addModel(App.Person);
+    this.addModel(App.Phone);
+  }
 });
 ```
+
+Define your models relationships with `{async: false}`.
+All relationships are retrieved automatically in a query. Just do the regular:
+
+```js
+App.Person = DS.Model.extend({
+  name: DS.attr('string'),
+  phones: DS.hasMany('phone') // no {async: true} calls here.
+});
+```
+
+**Version and Migrations**
+
+Different from localStorage, IndexedDB requires you to define the Object Stores
+you'll use (think of them like database table). By defining the models to be used
+inside the adapter's `migrations` function, it'll update the schema whenever
+needed.
+
+Remember that whenever you want to update this schema, you need to
+increment the version number (integer). Only so will IndexedDB commit the
+changes.
+
+Building from source
+-----
+
+In the root folder, type in your terminal `rake build`. Make sure you have
+Ruby installed. The file is generated in `dist/`.
+
+Known issues
+-----
+
+The following are areas that needs some improvements. We'd love if you could
+send a PR for one of them.
+
+* smarter transactions: we open a transaction, get some stuff, then close it
+  and move on. However, if we're going to load a relationship next, it happens
+  in a new transaction. It should all happen in one transaction.
+* extract transaction creation code: much of the code could be DRY'ed up. In the
+  development process, I was mostly experimenting with IndexedDB and Ember's
+  expectations on the adapter. This aspect of the code could receive some love.
+* indexes: as of now, there is no migrations API for creating indexes.
+
 
 Tests
 -----
@@ -24,8 +70,9 @@ Tests
 Run `rackup` in your terminal (make sure you have Ruby installed). Then visit
 `http://localhost:9292` in your browser.
 
-To run tests without a browser, run `phantomjs tests/runner.js tests/index.html`
-in your terminal.
+Note: PhantomJS (1.9.3) doesn't support IndexedDB. IndexedDBShim.js doesn't work
+on it either, so I'm running tests only in the browser for now. Once version 2
+is here, just use `phantomjs tests/runner.js tests/index.html` in your terminal.
 
 License & Copyright
 -------------------

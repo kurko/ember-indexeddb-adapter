@@ -4,9 +4,9 @@
 
 DS.IndexedDBSerializer = DS.JSONSerializer.extend({
   /**
+   * Extracts whatever was returned from the adapter.
    *
-   *
-   * The payload from the adapter is like this:
+   * If the adapter returns relationships in an embedded way, such as follows:
    *
    * ```js
    * {
@@ -15,15 +15,28 @@ DS.IndexedDBSerializer = DS.JSONSerializer.extend({
    *
    *   "_embedded": {
    *     "comment": [{
-   *       "_id": 1,
+   *       "id": 1,
    *       "comment_title": "FIRST"
    *     }, {
-   *       "_id": 2,
+   *       "id": 2,
    *       "comment_title": "Rails is unagi"
    *     }]
    *   }
    * }
    *
+   * this method will create separated JSON for each resource and then push
+   * them individually to the Store.
+   *
+   * In the end, only the main resource will remain, containing the ids of its
+   * relationships. Given the relations are already in the Store, we will
+   * return a JSON with the main resource alone. The Store will sort out the
+   * associations by itself.
+   *
+   * @method extractSingle
+   * @private
+   * @param {DS.Store} store the returned store
+   * @param {DS.Model} type the type/model
+   * @param {Object} payload returned JSON
    */
   extractSingle: function(store, type, payload) {
     if (payload._embedded) {
@@ -46,6 +59,15 @@ DS.IndexedDBSerializer = DS.JSONSerializer.extend({
     return this.normalize(type, payload);
   },
 
+  /**
+   * This is exactly the same as extractSingle, but used in an array.
+   *
+   * @method extractSingle
+   * @private
+   * @param {DS.Store} store the returned store
+   * @param {DS.Model} type the type/model
+   * @param {Array} payload returned JSONs
+   */
   extractArray: function(store, type, payload) {
     var serializer = this;
 

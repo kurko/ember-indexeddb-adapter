@@ -5,6 +5,7 @@ var store, database, databaseName;
 
 module('Integration/DS.IndexedDBAdapter', {
   setup: function() {
+    Em.run.begin();
     var env = {};
 
     databaseName = "AdapterTest";
@@ -30,9 +31,12 @@ module('Integration/DS.IndexedDBAdapter', {
           databaseName: databaseName,
           version: 1,
           migrations: function() {
-            this.addModel(App.Person);
-            this.addModel(App.Phone);
-            resolve();
+            var _this = this;
+            Em.run(function() {
+              _this.addModel(App.Person);
+              _this.addModel(App.Phone);
+              resolve();
+            });
           }
         });
 
@@ -51,6 +55,10 @@ module('Integration/DS.IndexedDBAdapter', {
     }).then(function() {
       start();
     });
+  },
+
+  teardown: function() {
+    Em.run.end();
   }
 });
 
@@ -157,7 +165,9 @@ test('#createRecord should create records', function() {
     });
   });
 
-  person.save();
+  Em.run(function() {
+    person.save();
+  });
 });
 
 test('#createRecord should include relationships', function() {
@@ -188,10 +198,14 @@ test('#createRecord should include relationships', function() {
       start();
     });
 
-    phone.save();
+    Em.run(function() {
+      phone.save();
+    });
   });
 
-  person.save();
+  Em.run(function() {
+    person.save();
+  });
 });
 
 test('#findAll returns all records', function() {
@@ -240,8 +254,10 @@ test('#updateRecord should update records', function() {
     });
   }
 
-  person.save().then(UpdatePerson)
-               .then(AssertPersonIsUpdated);
+  Em.run(function() {
+    person.save().then(UpdatePerson)
+                 .then(AssertPersonIsUpdated);
+  });
 });
 
 test('#deleteRecord delete a record', function() {
