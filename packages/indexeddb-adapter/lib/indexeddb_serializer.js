@@ -1,8 +1,16 @@
-/*global Ember*/
-/*global DS*/
-'use strict';
-
 DS.IndexedDBSerializer = DS.JSONSerializer.extend({
+
+  serializeHasMany: function(record, json, relationship) {
+    var key = relationship.key,
+        relationshipType = DS.RelationshipChange.determineRelationshipType(record.constructor, relationship);
+
+    if (relationshipType === 'manyToNone' ||
+        relationshipType === 'manyToMany' ||
+        relationshipType === 'manyToOne') {
+      json[key] = get(record, key).mapBy('id');
+    // TODO support for polymorphic manyToNone and manyToMany relationships
+    }
+  },
   /**
    * Extracts whatever was returned from the adapter.
    *
@@ -39,7 +47,7 @@ DS.IndexedDBSerializer = DS.JSONSerializer.extend({
    * @param {Object} payload returned JSON
    */
   extractSingle: function(store, type, payload) {
-    if (payload._embedded) {
+    if (payload && payload._embedded) {
       for (var relation in payload._embedded) {
         var typeName = Ember.String.singularize(relation),
             embeddedPayload = payload._embedded[relation];
@@ -75,5 +83,5 @@ DS.IndexedDBSerializer = DS.JSONSerializer.extend({
       var extracted = serializer.extractSingle(store, type, record);
       return serializer.normalize(type, record);
     });
-  },
+  }
 });

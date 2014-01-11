@@ -1,7 +1,7 @@
 var get = Ember.get,
     App = {};
 
-var store, database, databaseName;
+var store, database, databaseName, debugFlag = false;
 
 module('Integration/DS.IndexedDBAdapter', {
   setup: function() {
@@ -170,7 +170,7 @@ test('#createRecord should create records', function() {
   });
 });
 
-test('#createRecord should include relationships', function() {
+test('#createRecord should save hasMany relationships', function() {
   var person, phone;
   expect(3);
 
@@ -192,7 +192,6 @@ test('#createRecord should include relationships', function() {
       equal(get(phone, 'id'),     phone.id, 'phone id is loaded correctly');
       equal(get(phone, 'number'), '1234',   'phone number is loaded correctly');
 
-      // TODO this is broken because of Ember Data current bugs
       person = phone.get('person');
       equal(get(person, 'id'), personId, 'person is associated correctly');
       start();
@@ -205,6 +204,70 @@ test('#createRecord should include relationships', function() {
 
   Em.run(function() {
     person.save();
+  });
+});
+
+/**
+ * Saving embedded relations will create a lot of complexity. It's not
+ * something even the official adapters are doing right now.
+ */
+pending('#createRecord should save embedded relations', function() {
+  var person, phone;
+  expect(5);
+
+  Em.run(function() {
+    stop();
+    phone = store.createRecord('phone', { number: 1234 })
+    person = store.createRecord('person', { name: 'Billie Jean', cool: true });
+
+    equal(person.get('phones.length'), 0, "person has no phone");
+    person.get('phones').pushObject(phone);
+    equal(person.get('phones.length'), 1, "person has one phone");
+
+    person.save().then(function() {
+      return store.findQuery('person', {name: "Billie Jean"});
+    }).then(function(person) {
+      equal(get(person, 'phones.length'), 1, 'there is 1 phone after save');
+
+      var phone = person.get('phones.firstObject');
+
+      equal(get(phone, 'id'),     phone.id, 'phone id is created correctly');
+      equal(get(phone, 'number'), 1234,     'phone number is saved correctly');
+
+      start();
+    });
+  });
+});
+
+test("#createRecord: save() shouldn't lose relationships", function() {
+  var person, phone;
+  expect(8);
+
+  stop();
+  store.find('person', 'p1').then(function(person) {
+    equal(get(person, 'id'),   'p1',    'id is loaded correctly');
+    equal(get(person, 'name'), 'Rambo', 'name is loaded correctly');
+
+    var phones = person.get('phones'),
+        phone1 = phones.get('firstObject'),
+        phone2 = phones.get('lastObject');
+
+    equal(get(phone1, 'number'), '11',  'first phone number is loaded correctly');
+    equal(get(phone2, 'id'),     'ph2', 'second phone id is loaded correctly');
+
+    person.save().then(function(person) {
+      equal(get(person, 'id'),   'p1',    'id is loaded correctly');
+      equal(get(person, 'name'), 'Rambo', 'name is loaded correctly');
+
+      var phones = person.get('phones'),
+          phone1 = phones.get('firstObject'),
+          phone2 = phones.get('lastObject');
+
+      equal(get(phone1, 'number'), '11',  'first phone number is loaded correctly');
+      equal(get(phone2, 'id'),     'ph2', 'second phone id is loaded correctly');
+
+      start();
+    });
   });
 });
 
@@ -282,58 +345,68 @@ test('#deleteRecord delete a record', function() {
 });
 
 test('changes in bulk', function() {
-  stop();
-  var promises,
-      personToUpdate = store.find('person', 'p1'),
-      personToDelete = store.find('person', 'p2'),
-      personToCreate = store.createRecord('person', { name: 'Rambo' });
+  Em.run(function() {
+    stop();
+    var promises,
+        personToUpdate = store.find('person', 'p1'),
+        personToDelete = store.find('person', 'p2'),
+        personToCreate = store.createRecord('person', { name: 'Rambo' });
 
-  var UpdatePerson = function(person) {
-    person.set('name', 'updated');
-    return person;
-  }
+    var UpdatePerson = function(person) {
+      person.set('name', 'updated');
+      return person;
+    }
 
-  var DeletePerson = function(person) {
-    person.deleteRecord();
-    return person;
-  }
+    var DeletePerson = function(person) {
+      person.deleteRecord();
+      return person;
+    }
 
-  promises = [
-    personToCreate,
-    personToUpdate.then(UpdatePerson),
-    personToDelete.then(DeletePerson),
-  ];
+    promises = [
+      personToCreate,
+      personToUpdate.then(UpdatePerson),
+      personToDelete.then(DeletePerson),
+    ];
 
-  Ember.RSVP.all(promises).then(function(people) {
-    promises = Ember.A();
+    Ember.RSVP.all(promises).then(function(people) {
+      promises = Ember.A();
 
-    people.forEach(function(person) {
-      promises.push(person.save());
-    });
+      people.forEach(function(person) {
+        promises.push(person.save());
+      });
 
-    return promises;
-  }).then(function() {
-    var updatedPerson = store.find('person', 'p1'),
-        createdPerson = store.findQuery('person', {name: 'Rambo'}),
-        promises      = Ember.A();
+      return promises;
+    }).then(function() {
+      Em.run(function() {
+        var updatedPerson = store.find('person', 'p1'),
+            createdPerson = store.findQuery('person', {name: 'Rambo'});
+            promises      = [];
 
-    createdPerson.then(function(people) {
-      equal(get(people, 'length'), 1, "Record was created successfully");
-      promises.push(Ember.RSVP.Promise());
-    });
+        promises.push(new Ember.RSVP.Promise(function(resolve, reject) {
+          createdPerson.then(function(people) {
+            equal(get(people, 'length'), 1, "Record was created successfully");
+            resolve();
+          });
+        }));
 
-    store.find('person', 'p2').then(function(person) {
-      equal(get(person, 'length'), undefined, "Record was deleted successfully");
-      promises.push(Ember.RSVP.Promise());
-    });
+        promises.push(new Ember.RSVP.Promise(function(resolve, reject) {
+          store.find('person', 'p2').then(function(person) {
+            equal(get(person, 'length'), undefined, "Record was deleted successfully");
+            resolve();
+          });
+        }));
 
-    updatedPerson.then(function(person) {
-      equal(get(person, 'name'), 'updated', "Record was updated successfully");
-      promises.push(Ember.RSVP.Promise());
-    });
+        promises.push(new Ember.RSVP.Promise(function(resolve, reject) {
+          updatedPerson.then(function(person) {
+            equal(get(person, 'name'), 'updated', "Record was updated successfully");
+            resolve();
+          });
+        }));
 
-    Ember.RSVP.all(promises).then(function() {
-      start();
+        Ember.RSVP.all(promises).then(function() {
+          start();
+        });
+      });
     });
   });
 });

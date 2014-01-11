@@ -21,6 +21,7 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
     this.set('migration', this.get('migration').create());
     this.get('migration').set('databaseName', this.databaseName);
     this.get('migration').set('migrations', this.get('migrations'));
+    this.get('migration').set('version', this.get('version'));
     this.get('migration').migrate();
   },
 
@@ -32,6 +33,9 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
    */
   migration: DS.IndexedDBMigration.extend(),
 
+  defaultEmptyReturn: function() {
+    return {id: null};
+  },
   /**
    * This methods is used by the store to retrieve one record by ID.
    *
@@ -68,13 +72,16 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
           var record = this.result;
 
           Em.run(function() {
-            if (allowRecursive) {
+            if (allowRecursive && record) {
               adapter.loadRelationships(type, record).then(function(finalRecord) {
                 Em.run(function() {
                   resolve(finalRecord);
                 });
               });
             } else {
+              if (!record) {
+                record = adapter.defaultEmptyReturn();
+              }
               resolve(record);
             }
 
@@ -291,11 +298,11 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
    */
   createRecord: function (store, type, record) {
     var _this = this,
-        modelName = type.toString(),
-        serializedRecord = record.serialize({includeId: true});
+        modelName = type.toString();
 
     return new Ember.RSVP.Promise(function(resolve, reject) {
-      var connection, transaction, objectStore, saveRequest;
+      var connection, transaction, objectStore, saveRequest,
+          serializedRecord = record.serialize({includeId: true});
 
       _this.openDatabase().then(function(db) {
         /**
@@ -305,7 +312,7 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
 
         transaction.onerror = function(event) {
           Em.run(function() {
-            if (Ember.ENV.TESTING) {
+            if (Ember.testing) {
               console.error('transaction error: ' + event);
             }
           });
@@ -313,7 +320,7 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
 
         transaction.onabort = function(event) {
           Em.run(function() {
-            if (Ember.ENV.TESTING) {
+            if (Ember.testing) {
               console.error('transaction aborted: ' + event);
             }
           });
@@ -325,17 +332,22 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
         saveRequest.onsuccess = function(event) {
           Em.run(function() {
             db.close();
-            resolve(serializedRecord);
+            _this.loadRelationships(type, serializedRecord).then(function(finalRecord) {
+              Em.run(function() {
+                resolve(finalRecord);
+              });
+            });
           });
         };
 
         saveRequest.onerror = function(event) {
+          var result = this.result;
           Em.run(function() {
-            db.close();
-            if (Ember.ENV.TESTING) {
-              console.error('Add request error: ' + event);
+            if (Ember.testing) {
+              console.error('Add request error: ' + result);
             }
-            reject(this.result);
+            reject(result);
+            db.close();
           });
         };
       });
@@ -363,7 +375,7 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
 
         transaction.onerror = function(event) {
           Em.run(function() {
-            if (Ember.ENV.TESTING) {
+            if (Ember.testing) {
               console.error('transaction error: ' + event);
             }
           });
@@ -371,7 +383,7 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
 
         transaction.onabort = function(event) {
           Em.run(function() {
-            if (Ember.ENV.TESTING) {
+            if (Ember.testing) {
               console.error('transaction aborted: ' + event);
             }
           });
@@ -418,7 +430,7 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
 
         transaction.onerror = function(event) {
           Em.run(function() {
-            if (Ember.ENV.TESTING) {
+            if (Ember.testing) {
               console.error('transaction error: ' + event);
             }
           });
@@ -426,7 +438,7 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
 
         transaction.onabort = function(event) {
           Em.run(function() {
-            if (Ember.ENV.TESTING) {
+            if (Ember.testing) {
               console.error('transaction aborted: ' + event);
             }
           });
@@ -553,30 +565,45 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
 
       relationships.forEach(function(relationName) {
         var relationModel = type.typeForRelationship(relationName),
-            relationId    = record[relationName],
-            relationType  = adapter.typeRelationshipKind(type, relationName),
-            promise;
+            relationEmbeddedId = record[relationName],
+            relationProp  = adapter.relationshipProperties(type, relationName),
+            relationType  = relationProp.kind,
+            /**
+             * This is the relationship field.
+             */
+            promise, embedPromise;
 
-        if (relationId) {
-          var opts = {allowRecursive: false};
-
+        var opts = {allowRecursive: false};
+        /**
+         * embeddedIds are ids of relations that are included in the main
+         * payload, such as:
+         *
+         * {
+         *    cart: {
+         *      id: "s85fb",
+         *      customer: "rld9u"
+         *    }
+         * }
+         *
+         * In this case, cart belongsTo customer and its id is present in the
+         * main payload. We find each of these records and add them to _embedded.
+         */
+        if (relationEmbeddedId) {
           if (relationType == 'belongsTo' || relationType == 'hasOne') {
-            promise = adapter.find(store, relationModel, relationId, opts)
+            promise = adapter.find(store, relationModel, relationEmbeddedId, opts)
           } else if (relationType == 'hasMany') {
-            promise = adapter.findMany(store, relationModel, relationId, opts)
+            promise = adapter.findMany(store, relationModel, relationEmbeddedId, opts)
           }
+        }
 
-          promise.then(function(relationRecord) {
-            if (relationRecord) {
-              if (!record['_embedded']) {
-                record['_embedded'] = {}
-              }
-
-              record['_embedded'][relationName] = relationRecord;
-            }
+        if (promise) {
+          embedPromise = new Ember.RSVP.Promise(function(resolve, reject) {
+            promise.then(function(relationRecord) {
+              resolve(adapter.addEmbeddedPayload(record, relationName, relationRecord));
+            });
           });
 
-          relationshipPromises.push(promise);
+          relationshipPromises.push(embedPromise);
         }
       });
 
@@ -584,6 +611,59 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
         resolve(record);
       });
     });
+  },
+
+  /**
+   * Given the following payload,
+   *
+   *   {
+   *      cart: {
+   *        id: "1",
+   *        customer: "2"
+   *      }
+   *   }
+   *
+   * With `relationshipName` being `customer` and `relationshipRecord`
+   *
+   *   {id: "2", name: "Rambo"}
+   *
+   * This method returns the following payload:
+   *
+   *   {
+   *      cart: {
+   *        id: "1",
+   *        customer: "2"
+   *      },
+   *      _embedded: {
+   *        customer: {
+   *          id: "2",
+   *          name: "Rambo"
+   *        }
+   *      }
+   *   }
+   *
+   * which is then treated by the serializer later.
+   *
+   * @method addEmbeddedPayload
+   * @private
+   * @param {Object} payload
+   * @param {String} relationshipName
+   * @param {Object} relationshipRecord
+   */
+  addEmbeddedPayload: function(payload, relationshipName, relationshipRecord) {
+    if (relationshipRecord) {
+      if (!payload['_embedded']) {
+        payload['_embedded'] = {}
+      }
+
+      payload['_embedded'][relationshipName] = relationshipRecord;
+      if (relationshipRecord.length) {
+        payload[relationshipName] = relationshipRecord.mapBy('id');
+      } else {
+        payload[relationshipName] = relationshipRecord.id;
+      }
+    }
+    return payload;
   },
 
   /**
@@ -640,13 +720,17 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
 
   /**
    *
-   * @method typeRelationshipKind
+   * @method relationshipProperties
    * @private
    * @param {DS.Model} type
    * @param {String} relationName
    */
-  typeRelationshipKind: function(type, relationName) {
+  relationshipProperties: function(type, relationName) {
     var relationships = Ember.get(type, 'relationshipsByName');
-    return relationships.get(relationName).kind;
+    if (relationName) {
+      return relationships.get(relationName);
+    } else {
+      return relationships;
+    }
   }
 });

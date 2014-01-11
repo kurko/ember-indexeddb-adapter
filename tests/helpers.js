@@ -9,7 +9,7 @@ const FIXTURES = {
   ],
   "App.Phone": [
     { id: "ph1", number: "11", person: "p1" },
-    { id: "ph2", number: "22" }
+    { id: "ph2", number: "22", person: "p1" }
   ]
 };
 
