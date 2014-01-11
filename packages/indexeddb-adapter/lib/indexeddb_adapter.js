@@ -194,17 +194,9 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
                  * If the query param is a Regex
                  */
                 if (Object.prototype.toString.call(queryString).match("RegExp")) {
-                  if (new RegExp(queryString).test(queriedField)) {
-                    isMatch = true;
-                  } else {
-                    isMatch = false;
-                  }
+                  isMatch = new RegExp(queryString).test(queriedField);
                 } else {
-                  if (queriedField === queryString) {
-                    isMatch = true;
-                  } else {
-                    isMatch = false;
-                  }
+                  isMatch = (queriedField === queryString);
                 }
               }
 
@@ -594,9 +586,7 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
           } else if (relationType == 'hasMany') {
             promise = adapter.findMany(store, relationModel, relationEmbeddedId, opts)
           }
-        }
 
-        if (promise) {
           embedPromise = new Ember.RSVP.Promise(function(resolve, reject) {
             promise.then(function(relationRecord) {
               resolve(adapter.addEmbeddedPayload(record, relationName, relationRecord));
