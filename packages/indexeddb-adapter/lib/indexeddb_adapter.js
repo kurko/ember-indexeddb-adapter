@@ -80,9 +80,10 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
               });
             } else {
               if (!record) {
-                record = adapter.defaultEmptyReturn();
+                reject();
+              } else {
+                resolve(record);
               }
-              resolve(record);
             }
 
             db.close();
@@ -179,8 +180,7 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
 
             if (cursor) {
               for (var field in query) {
-                var queryString = query[field],
-                    queriedField = cursor.value[field];
+                var queryString = query[field];
 
                 /**
                  * If it was already defined that the current record doesn't match
@@ -190,13 +190,8 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
                   break;
                 }
 
-                /**
-                 * If the query param is a Regex
-                 */
-                if (Object.prototype.toString.call(queryString).match("RegExp")) {
-                  isMatch = new RegExp(queryString).test(queriedField);
-                } else {
-                  isMatch = (queriedField === queryString);
+                if (isMatch || typeof isMatch == "undefined") {
+                  isMatch = adapter.findQueryCriteria(field, queryString, cursor.value, type);
                 }
               }
 
@@ -206,7 +201,11 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
 
               cursor.continue();
             } else {
-              resolve(result);
+              if (!result.length) {
+                reject();
+              } else {
+                resolve(result);
+              }
               db.close();
             }
           });
@@ -226,6 +225,42 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
         return records;
       }
     });
+  },
+
+  findQueryCriteria: function(field, queryString, record, type) {
+    var queriedField;
+    /**
+     * If the query param is a Regex
+     */
+    if (field == "search") {
+      var isMatch;
+
+      for (var queriedField in record) {
+        var isSearchField = this.findQuerySearchCriteria(queriedField, type),
+            fieldValue = record[queriedField];
+
+        if (!isSearchField)
+          continue;
+
+        if (Object.prototype.toString.call(queryString).match("RegExp")) {
+          isMatch = isMatch || new RegExp(queryString).test(fieldValue);
+        } else {
+          isMatch = isMatch || (fieldValue === queryString);
+        }
+      }
+      return isMatch;
+    } else {
+      queriedField = record[field];
+      if (Object.prototype.toString.call(queryString).match("RegExp")) {
+        return new RegExp(queryString).test(queriedField);
+      } else {
+        return (queriedField === queryString);
+      }
+    }
+  },
+
+  findQuerySearchCriteria: function(fieldName, type) {
+    return true;
   },
 
   /**

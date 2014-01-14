@@ -43,6 +43,39 @@ Remember that whenever you want to update this schema, you need to
 increment the version number (integer). Only so will IndexedDB commit the
 changes.
 
+**Search feature**
+
+You can search the database doing this:
+
+```js
+// { id: 1, name: "Rambo",    cool: false }
+// { id: 2, name: "Braddock", cool: true  }
+store.findQuery('person', {search: /rambo|braddock/i, cool: false})
+// returns only the first record
+```
+
+The adapter will try matching the `search` value against every record using
+`AND` logic. In the case above, although the second record was matched, `cool`
+didn't match.
+
+You can change the fields that are searched reopening the method that defines if
+a field is to be searched:
+
+```js
+DS.IndexedDBAdapter.reopen({
+  findQuerySearchCriteria: function(fieldName, type) {
+    if (type.toString() == "App.User" && fieldName == "name") {
+      return false;
+    } else {
+      return true;
+    }
+  }
+});
+```
+
+The example above will allow search try matching every field, except
+`App.User.name`.
+
 Building from source
 -----
 

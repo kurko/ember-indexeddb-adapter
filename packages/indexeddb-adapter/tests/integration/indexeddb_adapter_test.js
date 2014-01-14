@@ -1,7 +1,7 @@
 var get = Ember.get,
     App = {};
 
-var store, database, databaseName, debugFlag = false;
+var store, database, databaseName, debugFlag = false, Adapter;
 
 module('Integration/DS.IndexedDBAdapter', {
   setup: function() {
@@ -27,7 +27,7 @@ module('Integration/DS.IndexedDBAdapter', {
       App.Phone.toString  = function() { return "App.Phone"; }
 
       var migrationsPromise = new Ember.RSVP.Promise(function(resolve, reject) {
-        var Adapter = DS.IndexedDBAdapter.extend({
+        Adapter = DS.IndexedDBAdapter.extend({
           databaseName: databaseName,
           version: 1,
           migrations: function() {
@@ -88,6 +88,17 @@ test('#find should find records and then its relations', function() {
   });
 });
 
+test('#find - promise is rejected when nothing is found', function() {
+  expect(1);
+  stop();
+  store.find('person', 'blabla').then(function() {
+    ok(false, "Item is not found");
+  }, function() {
+    ok(true, "Item is not found");
+    start();
+  });
+});
+
 test('#findQuery should find records using queries', function() {
   expect(4);
 
@@ -116,11 +127,57 @@ test('#findQuery should find records using queries', function() {
   });
 });
 
+test('#findQuery accepts `search` key', function() {
+  expect(3);
+  stop();
+  store.findQuery('person', {search: /rambo|braddock/i}).then(function(records) {
+    equal(get(records, 'length'), 2, 'found results for /rambo|braddock/i');
+    start();
+  });
+
+  stop();
+  store.findQuery('person', {search: /rambo|braddock/i, cool: true}).then(function(records) {
+    equal(get(records, 'length'), 1, 'takes into accounts other restrictions');
+    start();
+  });
+
+  stop();
+  store.findQuery('person', {search: /rambo|braddock/i, cool: false}).then(function(records) {
+    equal(get(records, 'length'), 1, 'searches string and cool: false');
+    start();
+  });
+});
+
+test('#findQuery - overriding Adapter#findQuerySearchCriteria', function() {
+  var mock = false;
+  expect(3);
+  stop();
+
+  Adapter.reopen({
+    findQuerySearchCriteria: function(fieldName, type) {
+      mock = type;
+      return false;
+    }
+  });
+  env = setupStore({ person: App.Person, phone: App.Phone, adapter: Adapter });
+
+  env.store.findQuery('person', {search: /rambo|braddock/i, cool: false}).then(function(records) {
+    equal(get(records, 'length'), 2, 'disregards search for all fields');
+
+    ok(mock, "#findQuerySearchCriteria is called");
+    equal(mock.toString(), "App.Person", "#findQuerySearchCriteria receives correct type");
+
+    start();
+  });
+});
+
 test('#findQuery should not return anything if nothing is found', function() {
   expect(1);
   stop();
-  store.findQuery('person', {whatever: "dude"}).then(function(records) {
-    equal(get(records, 'length'), 0, 'didn\'t find results for nonsense');
+  store.findQuery('person', {whatever: "dude"}).then(function() {
+    ok(false, "No item is found");
+  }, function() {
+    ok(true, "No item is found");
     start();
   });
 });
@@ -266,7 +323,7 @@ test("#save doesn't lose relationships from the store", function() {
   });
 });
 
-test("#createRecord: save() shouldn't lose relationships", function() {
+test("#createRecord - save shouldn't lose relationships", function() {
   var person, phone;
   expect(8);
 
@@ -385,7 +442,10 @@ test('#deleteRecord delete a record', function() {
   stop();
   var AssertPersonIsDeleted = function() {
     return store.findQuery('person', { name: 'Rambo' }).then(function(records) {
-      equal(get(records, 'length'), 0, "No record was found");
+      ok(false, "Item was deleted");
+      start();
+    }, function() {
+      ok(true, "Item was deleted");
       start();
     });
   }
