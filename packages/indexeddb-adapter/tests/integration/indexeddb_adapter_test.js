@@ -239,6 +239,33 @@ pending('#createRecord should save embedded relations', function() {
   });
 });
 
+test("#save doesn't lose relationships from the store", function() {
+  var phone, person;
+
+  stop();
+  Em.run(function() {
+    person = store.createRecord('person', { name: "Clint", cool: true });
+    phone = store.createRecord('phone', { number: 1234 });
+
+    person.get('phones').pushObject(phone);
+
+    person.save().then(function(person) {
+      equal(person.get('phones.length'), 1, "person has no phones initialy");
+
+      return phone.save();
+    }).then(function(phone) {
+      equal(person.get('phones.length'), 1, "person has phones before it's saved");
+
+      person.save().then(function(savedPerson) {
+        return savedPerson.reload();
+      }).then(function(savedPerson) {
+        equal(savedPerson.get('phones.length'), 1, "person has phones after being saved");
+        start();
+      });
+    });
+  });
+});
+
 test("#createRecord: save() shouldn't lose relationships", function() {
   var person, phone;
   expect(8);
@@ -267,6 +294,36 @@ test("#createRecord: save() shouldn't lose relationships", function() {
       equal(get(phone2, 'id'),     'ph2', 'second phone id is loaded correctly');
 
       start();
+    });
+  });
+});
+
+test("#save doesn't exclude relationships from the store", function() {
+  stop();
+  Em.run(function() {
+    person = store.createRecord('person', {
+      name: "Clint",
+      cool: true
+    });
+
+    phone = store.createRecord('phone', {
+      number: 1234
+    });
+
+    person.save().then(function(person) {
+      equal(person.get('phones.length'), 0, "person has no phones initialy");
+
+      person.get('phones').pushObject(phone);
+
+      return Ember.RSVP.resolve(person);
+    }).then(function(person) {
+      equal(person.get('phones.length'), 1, "person has phones before it's saved");
+      person.save().then(function(savedPerson) {
+        return savedPerson.reload();
+      }).then(function(savedPerson) {
+        equal(savedPerson.get('phones.length'), 1, "person has phones after being saved");
+        start();
+      });
     });
   });
 });

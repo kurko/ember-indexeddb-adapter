@@ -589,7 +589,8 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
 
           embedPromise = new Ember.RSVP.Promise(function(resolve, reject) {
             promise.then(function(relationRecord) {
-              resolve(adapter.addEmbeddedPayload(record, relationName, relationRecord));
+              var finalPayload = adapter.addEmbeddedPayload(record, relationName, relationRecord)
+              resolve(finalPayload);
             });
           });
 
@@ -641,7 +642,11 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
    * @param {Object} relationshipRecord
    */
   addEmbeddedPayload: function(payload, relationshipName, relationshipRecord) {
-    if (relationshipRecord) {
+    var objectHasId = (relationshipRecord && relationshipRecord.id),
+        arrayHasIds = (relationshipRecord.length && relationshipRecord.everyBy("id")),
+        isValidRelationship = (objectHasId || arrayHasIds);
+
+    if (isValidRelationship) {
       if (!payload['_embedded']) {
         payload['_embedded'] = {}
       }
@@ -653,7 +658,18 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
         payload[relationshipName] = relationshipRecord.id;
       }
     }
+
+    if (this.isArray(payload[relationshipName])) {
+      payload[relationshipName] = payload[relationshipName].filter(function(id) {
+        return id;
+      });
+    }
+
     return payload;
+  },
+
+  isArray: function(value) {
+    return Object.prototype.toString.call(value) === '[object Array]';
   },
 
   /**

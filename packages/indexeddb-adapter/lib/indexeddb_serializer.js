@@ -1,5 +1,10 @@
 DS.IndexedDBSerializer = DS.JSONSerializer.extend({
 
+  normalize: function(type, hash) {
+    var r = this._super(type, hash);
+    return hash;
+  },
+
   serializeHasMany: function(record, json, relationship) {
     var key = relationship.key,
         relationshipType = DS.RelationshipChange.determineRelationshipType(record.constructor, relationship);
