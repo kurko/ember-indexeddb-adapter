@@ -617,9 +617,9 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
          */
         if (relationEmbeddedId) {
           if (relationType == 'belongsTo' || relationType == 'hasOne') {
-            promise = adapter.find(store, relationModel, relationEmbeddedId, opts)
+            promise = adapter.find(null, relationModel, relationEmbeddedId, opts)
           } else if (relationType == 'hasMany') {
-            promise = adapter.findMany(store, relationModel, relationEmbeddedId, opts)
+            promise = adapter.findMany(null, relationModel, relationEmbeddedId, opts)
           }
 
           embedPromise = new Ember.RSVP.Promise(function(resolve, reject) {
