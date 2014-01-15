@@ -73,8 +73,8 @@ DS.IndexedDBAdapter.reopen({
 });
 ```
 
-The example above will allow search try matching every field, except
-`App.User.name`.
+With the redefinition above, the search will try to match every field, except
+`App.User`'s `name`.
 
 Building from source
 -----
