@@ -11,7 +11,7 @@ DS.IndexedDBSerializer = DS.JSONSerializer.extend({
     if (relationshipType === 'manyToNone' ||
         relationshipType === 'manyToMany' ||
         relationshipType === 'manyToOne') {
-      json[key] = get(record, key).mapBy('id');
+      json[key] = record.get(key).mapBy('id');
     // TODO support for polymorphic manyToNone and manyToMany relationships
     }
   },
