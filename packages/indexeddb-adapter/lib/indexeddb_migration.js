@@ -76,15 +76,25 @@ DS.IndexedDBMigration = Ember.Object.extend({
    * @method addModel
    * @param {DS.Model} type
    */
-  addModel: function(model) {
+  addModel: function(model, opts) {
     var db = this.memoizedOpenDatabaseForUpgrade,
         modelName = model.toString(),
+        opts = opts || {},
         _this = this;
 
     Em.run(function() {
-
       if (!db.objectStoreNames.contains(modelName)) {
-        var objectStore = db.createObjectStore(modelName, { keyPath: "id" });
+        var keyOpts = { keyPath: "id" },
+            objectStore;
+
+        if (opts.autoIncrement) {
+          keyOpts["autoIncrement"] = opts.autoIncrement;
+        }
+
+        if (opts.keyPath) {
+          keyOpts["keyPath"] = opts.keyPath;
+        }
+        objectStore = db.createObjectStore(modelName, keyOpts);
       }
     });
 

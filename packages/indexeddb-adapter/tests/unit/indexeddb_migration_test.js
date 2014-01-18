@@ -12,37 +12,87 @@ module('Unit/DS.IndexedDBMigration', {
       start();
     });
 
+    App.Person = DS.Model.extend({
+      name: DS.attr('string'),
+      cool: DS.attr('boolean'),
+      phones: DS.hasMany('phone')
+    });
+    App.Person.toString = function() { return "App.Person"; }
+
     var TestMigration = DS.IndexedDBMigration.extend({
-      migrations: [
-        function() {
-          this.addModel(App.Person);
-        },
-        function() {
-          this.addModel(App.Phone);
-        }
-      ]
+      migrations: function() {
+        this.addModel(App.Person);
+      }
     });
 
     migration = TestMigration.create({
-      databaseName: databaseName
+      databaseName: databaseName,
+      version: 1,
     });
   }
 });
 
-// test("#addModel creates a store for the passed in model", function() {
-//   stop();
-//   migration.addModel(App.Person).then(function() {
-//     cl('1');
-//     return openDatabase(databaseName);
-//   }).then(function(db) {
-//     cl('2');
-//     var stores = db.objectStoreNames;
-//     cl(stores);
-//     db.close();
-//     ok(stores.contains("App.Person"), "Person object store created");
-//     start();
-//   });
-// });
+test("#addModel creates a store for the passed in model", function() {
+  stop();
+  migration.migrate().then(function() {
+    return openDatabase(databaseName);
+  }).then(function(db) {
+    var stores = db.objectStoreNames;
+    db.close();
+    ok(stores.contains("App.Person"), "Person object store created");
+    start();
+  });
+});
+
+test("#addModel supports autoIncrement", function() {
+  var TestMigration = DS.IndexedDBMigration.extend({
+    migrations: function() {
+      this.addModel(App.Person, {autoIncrement: true});
+    }
+  });
+
+  migration = TestMigration.create({
+    databaseName: databaseName,
+    version: 1,
+  });
+
+  stop();
+  migration.migrate().then(function() {
+    return openDatabase(databaseName);
+  }).then(function(db) {
+    var stores = db.objectStoreNames,
+        transaction = db.transaction("App.Person", 'readwrite'),
+        objectStore = transaction.objectStore("App.Person"),
+        saveRequest;
+
+    ok(stores.contains("App.Person"), "Person object store created");
+    saveRequest = objectStore.add({name: "Test"});
+    saveRequest.onsuccess = function(event) {
+      var source = event.target.source;
+
+      equal(source.keyPath, "id", "Object store's id field is 'id'");
+      ok(source.autoIncrement, "Object store is auto increment");
+      equal(source.name, "App.Person", "Object store has correct name");
+      equal(this.result, 1, "First id was 1");
+
+      saveRequest = objectStore.add({name: "Test2"});
+      saveRequest.onsuccess = function(event) {
+        var source = event.target.source;
+        equal(this.result, 2, "Second id was 2");
+
+        db.close();
+        start();
+      }
+    }
+
+    saveRequest.onerror = function(event) {
+      cl(7);
+      console.log(this.result);
+      db.close();
+      start();
+    }
+  });
+});
 
 test('#runMigrations', function() {
   mock = "";

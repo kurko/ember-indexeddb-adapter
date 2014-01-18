@@ -43,6 +43,16 @@ Remember that whenever you want to update this schema, you need to
 increment the version number (integer). Only so will IndexedDB commit the
 changes.
 
+**KeyPath and autoIncrement**
+
+By default, the `keyPath` (id field) is `id` and `autoIncrement` is set to
+false. You can change these doing this:
+
+```js
+// inside migrations function
+this.addModel(App.Person, {keyPath: 'id', autoIncrement: true});
+```
+
 **Search feature**
 
 You can search the database doing this:
