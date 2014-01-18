@@ -53,6 +53,11 @@ false. You can change these doing this:
 this.addModel(App.Person, {keyPath: 'id', autoIncrement: true});
 ```
 
+**Important**: if you define `autoIncrement: true`, we won't use Ember's
+provided ID, but simply throw away it with `record.serialize({includeId: false})`.
+If you don't know what you're doing, just leave it as `false` so Ember Data can
+take care of the ID for you.
+
 **Search feature**
 
 You can search the database doing this:

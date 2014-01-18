@@ -63,7 +63,8 @@ test("#addModel supports autoIncrement", function() {
     var stores = db.objectStoreNames,
         transaction = db.transaction("App.Person", 'readwrite'),
         objectStore = transaction.objectStore("App.Person"),
-        saveRequest;
+        saveRequest,
+        getRequest;
 
     ok(stores.contains("App.Person"), "Person object store created");
     saveRequest = objectStore.add({name: "Test"});
@@ -73,15 +74,20 @@ test("#addModel supports autoIncrement", function() {
       equal(source.keyPath, "id", "Object store's id field is 'id'");
       ok(source.autoIncrement, "Object store is auto increment");
       equal(source.name, "App.Person", "Object store has correct name");
-      equal(this.result, 1, "First id was 1");
 
-      saveRequest = objectStore.add({name: "Test2"});
-      saveRequest.onsuccess = function(event) {
-        var source = event.target.source;
-        equal(this.result, 2, "Second id was 2");
 
-        db.close();
-        start();
+      objectStore.get(1).onsuccess = function(event) {
+        equal(this.result.id, 1, "First id was 1");
+        equal(this.result.name, "Test", "First name is correct");
+
+        saveRequest = objectStore.add({name: "Test2"});
+        saveRequest.onsuccess = function(event) {
+          var source = event.target.source;
+          equal(this.result, 2, "Second id was 2");
+
+          db.close();
+          start();
+        }
       }
     }
 

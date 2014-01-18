@@ -328,8 +328,7 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
         modelName = type.toString();
 
     return new Ember.RSVP.Promise(function(resolve, reject) {
-      var connection, transaction, objectStore, saveRequest,
-          serializedRecord = record.serialize({includeId: true});
+      var connection, transaction, objectStore, saveRequest, serializedRecord;
 
       _this.openDatabase().then(function(db) {
         /**
@@ -355,6 +354,7 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
 
         objectStore = transaction.objectStore(modelName);
 
+        serializedRecord = record.serialize({includeId: !objectStore.autoIncrement});
         saveRequest = objectStore.add(serializedRecord);
         saveRequest.onsuccess = function(event) {
           Em.run(function() {
@@ -498,7 +498,7 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
    * @method generateIdForRecord
    * @private
    */
-  generateIdForRecord: function () {
+  generateIdForRecord: function() {
     return Math.random().toString(32).slice(2).substr(0, 5);
   },
 

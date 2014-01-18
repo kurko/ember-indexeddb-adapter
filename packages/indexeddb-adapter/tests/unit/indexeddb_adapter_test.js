@@ -2,7 +2,8 @@
 var get = Ember.get,
     App = {};
 
-var adapter, mock, payload, result, expected;
+var adapter, mock, payload, result, expected,
+    databaseName = "AdapterTest";
 
 module('Unit/DS.IndexedDBAdapter', {
   setup: function() {
@@ -99,4 +100,66 @@ test("#addEmbeddedPayload doesn't delete relation when relation has no IDs", fun
   result = adapter.addEmbeddedPayload(payload, 'customer', relationshipRecord);
 
   deepEqual(result, expected, "Embedded payload has the correct format");
+});
+
+test("#createRecord should not serialize ID if it's autoIncrement", function() {
+  var env, store;
+  expect(4);
+
+  stop();
+  deleteDatabase(databaseName).then(function() {
+    App.Person = DS.Model.extend({ name: DS.attr('string') });
+    App.Person.toString = function() { return "App.Person"; }
+
+    return new Ember.RSVP.Promise(function(resolve, reject) {
+      var Adapter = DS.IndexedDBAdapter.extend({
+        databaseName: databaseName,
+        version: 1,
+        migrations: function() {
+          this.addModel(App.Person, {autoIncrement: true});
+          resolve(store);
+        }
+      });
+
+      env = setupStore({
+        person: App.Person,
+        adapter: Adapter
+      });
+
+      store = env.store;
+    });
+  }).then(function() {;
+    var newPerson = store.createRecord('person', { name: 'Billie Jean' }),
+        adapter = store.adapter.create();
+
+    adapter.createRecord(null, App.Person, newPerson).then(function(person) {
+      newPerson.deleteRecord();
+
+      return store.findAll('person');
+    }).then(function(people) {
+      var person1 = people.objectAt(0);
+
+      equal(get(person1, 'id'),   1,             'id is loaded correctly');
+      equal(get(person1, 'name'), 'Billie Jean', 'name is loaded correctly');
+
+      newPerson = store.createRecord('person', { name: 'Billie Jeans' })
+      return adapter.createRecord(null, App.Person, newPerson)
+    }, function() {
+      ok(false, "Person is saved");
+      start();
+    }).then(function(person) {
+      newPerson.deleteRecord();
+
+      store.findAll('person').then(function(people) {
+        var person1 = people.objectAt(1);
+
+        equal(get(person1, 'id'),   2,             'id is loaded correctly');
+        equal(get(person1, 'name'), 'Billie Jeans', 'name is loaded correctly');
+        start();
+      }, function() {
+        ok(false, "Person is saved");
+        start();
+      });
+    });
+  });
 });
