@@ -123,11 +123,13 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
 
         cursor = objectStore.openCursor();
         cursor.onsuccess = function(event) {
-          Em.run(function() {
-            var cursor = event.target.result;
+          var cursor = event.target.result;
 
-            if (cursor && ids.contains(cursor.value.id)) {
-              result.push(cursor.value);
+          Em.run(function() {
+            if (cursor) {
+              if (ids.contains(cursor.value.id)) {
+                result.push(cursor.value);
+              }
               cursor.continue();
             } else {
               resolve(result);
