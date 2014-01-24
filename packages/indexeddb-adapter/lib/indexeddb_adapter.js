@@ -475,18 +475,28 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
 
         objectStore = transaction.objectStore(modelName);
 
-        operation = objectStore.delete(id);
-        operation.onsuccess = function(event) {
+        transaction.oncomplete = function(t) {
           Em.run(function() {
             resolve(serializedRecord);
             db.close();
+          });
+        }
+
+        if (objectStore.autoIncrement) {
+          id = parseInt(id);
+        }
+        operation = objectStore.delete(id);
+        operation.onsuccess = function(event) {
+          Em.run(function() {
+            db.close();
+            resolve(serializedRecord);
           });
         };
 
         operation.onerror = function(event) {
           Em.run(function() {
-            reject(event.target.result);
             db.close();
+            reject(event.target.result);
           });
         };
       });
