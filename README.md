@@ -117,7 +117,7 @@ Building from source
 In the root folder, type in your terminal `rake build`. Make sure you have
 Ruby installed. The file is generated in `dist/`.
 
-Known issues
+Areas for improvement
 -----
 
 The following are areas that needs some improvements. We'd love if you could
@@ -130,7 +130,11 @@ send a PR for one of them.
   development process, I was mostly experimenting with IndexedDB and Ember's
   expectations on the adapter. This aspect of the code could receive some love.
 * indexes: as of now, there is no migrations API for creating indexes.
-
+* search: there's no way to do a fuzzy search with IndexedDB (besides the basic
+  string match). Right now, we go through all records matching them, but later
+  we'll want to create an objectStore to cache all strings with the original
+  record ID. That way we'd be able to cut down the amount of data we put in
+  memory.
 
 Tests
 -----

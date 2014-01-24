@@ -176,6 +176,7 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
 
         cursor = objectStore.openCursor();
         cursor.onsuccess = function(event) {
+          db.close();
           Em.run(function() {
             var cursor = event.target.result,
                 isMatch;
@@ -208,7 +209,6 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
               } else {
                 resolve(result);
               }
-              db.close();
             }
           });
         }
