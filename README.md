@@ -32,7 +32,7 @@ App.Person = DS.Model.extend({
 });
 ```
 
-**Version and Migrations**
+### Version and Migrations
 
 Different from localStorage, IndexedDB requires you to define the Object Stores
 you'll use (think of them like database table). By defining the models to be used
@@ -43,7 +43,7 @@ Remember that whenever you want to update this schema, you need to
 increment the version number (integer). Only so will IndexedDB commit the
 changes.
 
-**KeyPath and autoIncrement**
+### KeyPath and autoIncrement
 
 By default, the `keyPath` (id field) is `id` and `autoIncrement` is set to
 false. You can change these doing this:
@@ -58,19 +58,31 @@ provided ID, but simply throw away it with `record.serialize({includeId: false})
 If you don't know what you're doing, just leave it as `false` so Ember Data can
 take care of the ID for you.
 
-**Search feature**
+### Search feature
 
-You can search the database doing this:
+By default, the adapter will try to match the best results. Consider the
+database has the following:
 
 ```js
-// { id: 1, name: "Rambo",    cool: false }
-// { id: 2, name: "Braddock", cool: true  }
+[ { id: 1, name: "Rambo",    cool: false },
+  { id: 2, name: "Braddock", cool: true  } ]
+```
+
+The following will match different results:
+
+```js
+// returns only the first record
 store.findQuery('person', {search: /rambo|braddock/i, cool: false})
 // returns only the first record
+store.findQuery('person', {search: "rmb", cool: false})
+// returns both records
+store.findQuery('person', {search: "ao"})
+// returns only the last record
+store.findQuery('person', {search: "ao", cool: true})
 ```
 
 The adapter will try matching the `search` value against every record using
-`AND` logic. In the case above, although the second record was matched, `cool`
+`AND` logic. In some cases above, although name was matched, `cool`
 didn't match.
 
 You can change the fields that are searched reopening the method that defines if
@@ -90,6 +102,14 @@ DS.IndexedDBAdapter.reopen({
 
 With the redefinition above, the search will try to match every field, except
 `App.User`'s `name`.
+
+#### Disabling smartSearch
+
+If you want to disable `smartSearch`, write this:
+
+    DS.IndexedDBAdapter.reopen({
+      smartSearch: false
+    });
 
 Building from source
 -----

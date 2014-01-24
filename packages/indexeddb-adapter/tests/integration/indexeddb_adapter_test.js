@@ -100,73 +100,14 @@ test('#find - promise is rejected when nothing is found', function() {
 });
 
 test('#findQuery should find records using queries', function() {
-  expect(4);
+  /**
+   * more extensive tests under integration/indexeddb_adapter_search_test.js
+   */
+  expect(1);
 
   stop();
   store.findQuery('person', {name: /rambo|braddock/i}).then(function(records) {
     equal(get(records, 'length'), 2, 'found results for /rambo|braddock/i');
-    start();
-  });
-
-  stop();
-  store.findQuery('person', {name: /.+/, id: /p1/}).then(function(records) {
-    equal(get(records, 'length'), 1, 'found results for {name: /.+/, id: /p1/}');
-    start();
-  });
-
-  stop();
-  store.findQuery('person', {name: 'Rambo'}).then(function(records) {
-    equal(get(records, 'length'), 1, 'found results for name "Rambo"');
-    start();
-  });
-
-  stop();
-  store.findQuery('person', {cool: true}).then(function(records) {
-    equal(get(records, 'length'), 1, 'found results for {cool: true}');
-    start();
-  });
-});
-
-test('#findQuery accepts `search` key', function() {
-  expect(3);
-  stop();
-  store.findQuery('person', {search: /rambo|braddock/i}).then(function(records) {
-    equal(get(records, 'length'), 2, 'found results for /rambo|braddock/i');
-    start();
-  });
-
-  stop();
-  store.findQuery('person', {search: /rambo|braddock/i, cool: true}).then(function(records) {
-    equal(get(records, 'length'), 1, 'takes into accounts other restrictions');
-    start();
-  });
-
-  stop();
-  store.findQuery('person', {search: /rambo|braddock/i, cool: false}).then(function(records) {
-    equal(get(records, 'length'), 1, 'searches string and cool: false');
-    start();
-  });
-});
-
-test('#findQuery - overriding Adapter#findQuerySearchCriteria', function() {
-  var mock = false;
-  expect(3);
-  stop();
-
-  Adapter.reopen({
-    findQuerySearchCriteria: function(fieldName, type) {
-      mock = type;
-      return false;
-    }
-  });
-  env = setupStore({ person: App.Person, phone: App.Phone, adapter: Adapter });
-
-  env.store.findQuery('person', {search: /rambo|braddock/i, cool: false}).then(function(records) {
-    equal(get(records, 'length'), 2, 'disregards search for all fields');
-
-    ok(mock, "#findQuerySearchCriteria is called");
-    equal(mock.toString(), "App.Person", "#findQuerySearchCriteria receives correct type");
-
     start();
   });
 });

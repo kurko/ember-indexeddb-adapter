@@ -5,6 +5,7 @@
 DS.IndexedDBAdapter = DS.Adapter.extend({
   databaseName: 'IDBAdapter',
 
+  smartSearch: true,
   /**
    * IndexedDB requires that the database is initialized and have a defined
    * schema. It's not like localStorage, where you just store things. You have
@@ -14,7 +15,6 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
    * object to do its thing, which is to initialize the database.
    *
    * @method init
-   * @private
    */
   init: function() {
     this._super();
@@ -244,11 +244,7 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
         if (!isSearchField)
           continue;
 
-        if (Object.prototype.toString.call(queryString).match("RegExp")) {
-          isMatch = isMatch || new RegExp(queryString).test(fieldValue);
-        } else {
-          isMatch = isMatch || (fieldValue === queryString);
-        }
+        isMatch = isMatch || this.findQuerySearchOperation(queryString, fieldValue);
       }
       return isMatch;
     } else {
@@ -259,6 +255,40 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
         return (queriedField === queryString);
       }
     }
+  },
+
+  /**
+   * SEARCH
+   *
+   * If you want to have a custom search algorithm, you should override this
+   * method.
+   *
+   * @method findQuerySearchOperation
+   */
+  findQuerySearchOperation: function(queryString, fieldValue) {
+    var isMatch;
+
+    if (!queryString || queryString == " ") { return false; }
+
+    if (Object.prototype.toString.call(queryString).match("RegExp")) {
+      isMatch = isMatch || new RegExp(queryString).test(fieldValue);
+    } else {
+      isMatch = isMatch || (fieldValue === queryString);
+
+      if (this.smartSearch) {
+        var str,
+            strArray = [];
+
+        for (var i = 0, len = queryString.length; i < len; i++) {
+          strArray.push(queryString[i]);
+        }
+
+        str = new RegExp(strArray.join(".*"), "i");
+        isMatch = isMatch || new RegExp(str).test(fieldValue);
+      }
+    }
+
+    return isMatch;
   },
 
   findQuerySearchCriteria: function(fieldName, type) {
