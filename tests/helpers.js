@@ -1,11 +1,36 @@
 Ember.ENV.TESTING = true;
 Ember.testing = true;
 
+var myDate = function(offset) {
+  var t = new Date;
+  if (offset) {
+    t.setDate(t.getDate() + offset);
+  }
+  return t;
+};
+
 const FIXTURES = {
   "App.Person": [
-    { id: "p1", name: "Rambo", cool: true, phones: ['ph1', 'ph2'] },
-    { id: "p2", name: "Braddock", cool: false },
-    { id: "p3", name: "Billie Jack", cool: false }
+    { id: "p1", name: "Rambo", cool: true, phones: ['ph1', 'ph2'], createdAt: "2013-01-02T16:44:57.000Z" },
+    { id: "p2", name: "Braddock", cool: false, createdAt: "Fri Jan 31 2013 17:45:16 GMT-0200 (BRST)" },
+    {
+      id: "p3",
+      name: "Billie Jack",
+      cool: false,
+      createdAt: (new Date()).toISOString()
+    },
+    {
+      id: "p4",
+      name: "Yesterday",
+      cool: false,
+      createdAt: myDate(-1)
+    },
+    {
+      id: "p5",
+      name: "45 days ago",
+      cool: false,
+      createdAt: myDate(-45)
+    }
   ],
   "App.Phone": [
     { id: "ph1", number: "11", person: "p1" },

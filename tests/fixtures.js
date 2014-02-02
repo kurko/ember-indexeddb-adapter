@@ -1,5 +1,5 @@
 const PERSON = [
-  { id: 1, name: "Rambo",   cool: true,  phones: [1, 2] },
+  { id: 1, name: "Rambo",   cool: true,  phones: [1, 2], createdAt: (new Date()) },
   { id: 2, name: "Bradock", cool: false }
 ];
 

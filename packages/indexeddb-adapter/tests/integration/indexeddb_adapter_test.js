@@ -335,7 +335,7 @@ test('#findAll returns all records', function() {
         secondRecord = records.objectAt(1),
         thirdRecord  = records.objectAt(2);
 
-    equal(get(records, 'length'), 3, "3 items were found");
+    equal(get(records, 'length'), 5, "5 items were found");
 
     equal(get(firstRecord,  'name'), "Rambo", "First item's name is one");
     equal(get(secondRecord, 'name'), "Braddock", "Second item's name is two");

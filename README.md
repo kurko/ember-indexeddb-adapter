@@ -58,10 +58,33 @@ provided ID, but simply throw away it with `record.serialize({includeId: false})
 If you don't know what you're doing, just leave it as `false` so Ember Data can
 take care of the ID for you.
 
-### Search feature
+## SmartSearch feature
 
-By default, the adapter will try to match the best results. Consider the
-database has the following:
+SmartSearch (disabled by default) allows you to make more meaningful queries,
+ones that you would probably perform against a REST api. With it, you will
+be able to do the following queries.
+
+#### Dates
+
+If you have a field with a `date` transform, the adapter will try to match
+the records that match a given date.
+
+```js
+App.Person = DS.Model.extend({
+  name: DS.attr('string'),
+  createdAt: DS.attr('date')
+});
+
+// Date matches
+store.findQuery('person', {createdAt: "today"})
+store.findQuery('person', {createdAt: "yesterday"})
+store.findQuery('person', {createdAt: "32 days ago"})
+```
+
+#### Full-text search
+
+Whenever you use a `search` key in your query, the adapter will try to match it
+against all fields. Consider the database has the following:
 
 ```js
 [ { id: 1, name: "Rambo",    cool: false },
@@ -103,13 +126,15 @@ DS.IndexedDBAdapter.reopen({
 With the redefinition above, the search will try to match every field, except
 `App.User`'s `name`.
 
-#### Disabling smartSearch
+### Enabling SmartSearch
 
-If you want to disable `smartSearch`, write this:
+If you want to enable `smartSearch`, write this:
 
-    DS.IndexedDBAdapter.reopen({
-      smartSearch: false
-    });
+```js
+DS.IndexedDBAdapter.reopen({
+  smartSearch: true
+});
+```
 
 Building from source
 -----
@@ -126,9 +151,6 @@ send a PR for one of them.
 * smarter transactions: we open a transaction, get some stuff, then close it
   and move on. However, if we're going to load a relationship next, it happens
   in a new transaction. It should all happen in one transaction.
-* extract transaction creation code: much of the code could be DRY'ed up. In the
-  development process, I was mostly experimenting with IndexedDB and Ember's
-  expectations on the adapter. This aspect of the code could receive some love.
 * indexes: as of now, there is no migrations API for creating indexes.
 * search: there's no way to do a fuzzy search with IndexedDB (besides the basic
   string match). Right now, we go through all records matching them, but later

@@ -5,6 +5,7 @@ task :build do
   files = [
     "packages/indexeddb-adapter/lib/indexeddb_migration.js",
     "packages/indexeddb-adapter/lib/indexeddb_serializer.js",
+    "packages/indexeddb-adapter/lib/indexeddb_smartsearch.js",
     "packages/indexeddb-adapter/lib/indexeddb_adapter.js"
   ]
 

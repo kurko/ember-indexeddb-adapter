@@ -5,7 +5,6 @@
 DS.IndexedDBAdapter = DS.Adapter.extend({
   databaseName: 'IDBAdapter',
 
-  smartSearch: true,
   /**
    * IndexedDB requires that the database is initialized and have a defined
    * schema. It's not like localStorage, where you just store things. You have
@@ -17,11 +16,15 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
    * @method init
    */
   init: function() {
-    this._super();
     this.set('migration', this.get('migration').create());
     this.get('migration').set('databaseName', this.databaseName);
     this.get('migration').set('migrations', this.get('migrations'));
     this.get('migration').set('version', this.get('version'));
+
+    if (!this.get('smartSearch')) {
+      this.set('smartSearch', false);
+    }
+
     this.get('migration').migrate();
   },
 
@@ -232,21 +235,20 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
   findQueryCriteria: function(field, queryString, record, type) {
     var queriedField;
     /**
-     * If the query param is a Regex
+     * If smartSearch is enabled, we pass the responsibility on to
+     * `DS.IndexedDBSmartSearch`. This performs tasks like matching dates and
+     * fulltext search.
      */
-    if (field == "search") {
-      var isMatch;
+    if (this.get('smartSearch')) {
+      var smartSearch = DS.IndexedDBSmartSearch.createWithMixins({
+        field: field,
+        queryString: queryString,
+        record: record,
+        type: type,
+        fieldSearchCriteria: this.get('findQuerySearchCriteria')
+      });
 
-      for (var queriedField in record) {
-        var isSearchField = this.findQuerySearchCriteria(queriedField, type),
-            fieldValue = record[queriedField];
-
-        if (!isSearchField)
-          continue;
-
-        isMatch = isMatch || this.findQuerySearchOperation(queryString, fieldValue);
-      }
-      return isMatch;
+      return smartSearch.isMatch();
     } else {
       queriedField = record[field];
       if (Object.prototype.toString.call(queryString).match("RegExp")) {
@@ -255,40 +257,6 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
         return (queriedField === queryString);
       }
     }
-  },
-
-  /**
-   * SEARCH
-   *
-   * If you want to have a custom search algorithm, you should override this
-   * method.
-   *
-   * @method findQuerySearchOperation
-   */
-  findQuerySearchOperation: function(queryString, fieldValue) {
-    var isMatch;
-
-    if (!queryString || queryString == " ") { return false; }
-
-    if (Object.prototype.toString.call(queryString).match("RegExp")) {
-      isMatch = isMatch || new RegExp(queryString).test(fieldValue);
-    } else {
-      isMatch = isMatch || (fieldValue === queryString);
-
-      if (this.smartSearch) {
-        var str,
-            strArray = [];
-
-        for (var i = 0, len = queryString.length; i < len; i++) {
-          strArray.push(queryString[i]);
-        }
-
-        str = new RegExp(strArray.join(".*"), "i");
-        isMatch = isMatch || new RegExp(str).test(fieldValue);
-      }
-    }
-
-    return isMatch;
   },
 
   findQuerySearchCriteria: function(fieldName, type) {

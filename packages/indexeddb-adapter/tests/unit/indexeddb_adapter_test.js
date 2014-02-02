@@ -18,44 +18,6 @@ module('Unit/DS.IndexedDBAdapter', {
   }
 });
 
-var findQueryMatch = function(query, string) {
-  result = adapter.findQuerySearchOperation(query, string);
-  ok(result, "'"+query+"' in '"+string+"'");
-}
-var findQueryNoMatch = function(query, string) {
-  result = adapter.findQuerySearchOperation(query, string);
-  ok(!result, "'"+query+"' not found in '"+string+"'");
-}
-
-test("#findQuerySearchOperation's matches without searchSmart", function() {
-  adapter.set("smartSearch", false);
-  findQueryMatch("John Rambo", "John Rambo");
-
-  findQueryNoMatch("John", "John Rambo");
-  findQueryNoMatch("Rambo", "John Rambo");
-  findQueryNoMatch("ram", "John Rambo");
-  findQueryNoMatch("m", "John Rambo");
-  findQueryNoMatch("ohm", "John Rambo");
-  findQueryNoMatch(" ", "John Rambo");
-  findQueryNoMatch(" l ", "John Rambo");
-  findQueryNoMatch("", "John Rambo");
-});
-
-test("#findQuerySearchOperation's matches with searchSmart", function() {
-  adapter.set("smartSearch", true);
-
-  findQueryMatch("rambo", "John Rambo");
-  findQueryMatch("ram", "John Rambo");
-  findQueryMatch("m", "John Rambo");
-  findQueryMatch("ohm", "John Rambo");
-
-  findQueryNoMatch("boj", "John Rambo");
-  findQueryNoMatch(" ", "John Rambo");
-  findQueryNoMatch("  ", "John Rambo");
-  findQueryNoMatch(" l ", "John Rambo");
-  findQueryNoMatch("", "John Rambo");
-});
-
 test('#addEmbeddedPayload builds _embedded object', function() {
   var relationshipRecord;
 
