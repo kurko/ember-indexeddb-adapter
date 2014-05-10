@@ -8,7 +8,8 @@ Fully tested.
 Usage
 -----
 
-Download the latest distribution and then use it like this:
+Download the latest distribution or use bower to install 
+`ember-indexeddb-adapter`.
 
 ```js
 App.ApplicationSerializer = DS.IndexedDBSerializer.extend();
@@ -161,8 +162,10 @@ send a PR for one of them.
 Tests
 -----
 
-Run `rackup` in your terminal (make sure you have Ruby installed). Then visit
-`http://localhost:9292` in your browser.
+First, install depdendencies with bower: `bower install`.
+
+Run `rackup` in your terminal (make sure you have Ruby and the rack gem installed).
+Then visit `http://localhost:9292` in your browser.
 
 Please, disregard Travis CI for now because PhantomJS (1.9.3) doesn't support
 IndexedDB. IndexedDBShim.js doesn't work

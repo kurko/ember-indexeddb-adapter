@@ -1,2 +1,7 @@
 language: node_js
+
+before_install:
+  - npm install -g bower
+  - bower install
+
 script: "phantomjs tests/runner.js tests/index.html"
