@@ -23,9 +23,6 @@ var setup = function(options) {
       person: DS.belongsTo('person')
     });
 
-    App.Person.toString = function() { return "App.Person"; }
-    App.Phone.toString  = function() { return "App.Phone"; }
-
     var migrationsPromise = setStore(options)
 
     return migrationsPromise;
@@ -54,8 +51,8 @@ var setStore = function(options) {
       migrations: function() {
         var _this = this;
         Em.run(function() {
-          _this.addModel(App.Person);
-          _this.addModel(App.Phone);
+          _this.addModel('person');
+          _this.addModel('phone');
           resolve();
         });
       }
@@ -293,7 +290,7 @@ test('#findQuery - overriding Adapter#findQuerySearchCriteria', function() {
     equal(get(records, 'length'), 4, 'disregards search for all fields');
 
     ok(mock, "#findQuerySearchCriteria is called");
-    equal(mock.toString(), "App.Person", "#findQuerySearchCriteria receives correct type");
+    equal(mock.typeKey, "person", "#findQuerySearchCriteria receives correct type");
 
     start();
   });

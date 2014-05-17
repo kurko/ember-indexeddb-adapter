@@ -116,7 +116,7 @@ test("#createRecord should not serialize ID if it's autoIncrement", function() {
         databaseName: databaseName,
         version: 1,
         migrations: function() {
-          this.addModel(App.Person, {autoIncrement: true});
+          this.addModel('person', {autoIncrement: true});
           resolve(store);
         }
       });

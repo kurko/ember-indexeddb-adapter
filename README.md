@@ -2,13 +2,13 @@ Ember Data IndexedDB Adapter
 ================================
 
 Store your Ember application data offline with IndexedDB.
-Compatible with Ember Data 1.0.0-beta5+.
+Compatible with Ember Data 1.0.0-beta7.
 Fully tested.
 
 Usage
 -----
 
-Download the latest distribution or use bower to install 
+Download the latest distribution or use bower to install
 `ember-indexeddb-adapter`.
 
 ```js
@@ -17,8 +17,8 @@ App.ApplicationAdapter = DS.IndexedDBAdapter.extend({
   databaseName: 'some_database_name'
   version: 1,
   migrations: function() {
-    this.addModel(App.Person);
-    this.addModel(App.Phone);
+    this.addModel('person');
+    this.addModel('phone');
   }
 });
 ```
@@ -32,6 +32,8 @@ App.Person = DS.Model.extend({
   phones: DS.hasMany('phone') // no {async: true} calls here.
 });
 ```
+
+**Note:** use a string as parameter for `this.addModel('person')`.
 
 ### Version and Migrations
 
@@ -51,7 +53,7 @@ false. You can change these doing this:
 
 ```js
 // inside migrations function
-this.addModel(App.Person, {keyPath: 'id', autoIncrement: true});
+this.addModel('person', {keyPath: 'id', autoIncrement: true});
 ```
 
 **Important**: if you define `autoIncrement: true`, we won't use Ember's

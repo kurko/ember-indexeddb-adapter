@@ -65,8 +65,8 @@ DS.IndexedDBMigration = Ember.Object.extend({
    *       databaseName: 'some_database_name'
    *       version: 1,
    *       migrations: function() {
-   *         this.addModel(App.Person);
-   *         this.addModel(App.Phone);
+   *         this.addModel('person');
+   *         this.addModel('phone');
    *       }
    *     });
    *
@@ -74,11 +74,10 @@ DS.IndexedDBMigration = Ember.Object.extend({
    * App.Phone automatically.
    *
    * @method addModel
-   * @param {DS.Model} type
+   * @param string modelName
    */
-  addModel: function(model, opts) {
+  addModel: function(modelName, opts) {
     var db = this.memoizedOpenDatabaseForUpgrade,
-        modelName = model.toString(),
         opts = opts || {},
         _this = this;
 

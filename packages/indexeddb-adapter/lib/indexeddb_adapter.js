@@ -63,7 +63,7 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
     }
 
     return new Ember.RSVP.Promise(function(resolve, reject) {
-      var modelName = type.toString(),
+      var modelName = type.typeKey,
           connection, transaction, objectStore, findRequest;
 
       adapter.openDatabase().then(function(db) {
@@ -94,6 +94,7 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
         };
 
         findRequest.onerror = function(event) {
+          console.error("IndexedDB error", event.target.errorCode);
           Em.run(function() {
             reject(event.target.result);
             db.close();
@@ -116,7 +117,7 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
     var adapter = this;
 
     return new Ember.RSVP.Promise(function(resolve, reject) {
-      var modelName = type.toString(),
+      var modelName = type.typeKey,
           result = [],
           connection, transaction, objectStore, findRequest, cursor;
 
@@ -141,7 +142,7 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
           });
         }
 
-        cursor.onerror = function() {
+        cursor.onerror = function(event) {
           Em.run(function() {
             reject(event.target.result);
             db.close();
@@ -169,7 +170,7 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
     var adapter = this;
 
     return new Ember.RSVP.Promise(function(resolve, reject) {
-      var modelName = type.toString(),
+      var modelName = type.typeKey,
           result = [],
           connection, transaction, objectStore, findRequest, cursor;
 
@@ -217,6 +218,9 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
         }
 
         cursor.onerror = function(event) {
+          if (Ember.testing) {
+            console.error("IndexedDB error", event.target.errorCode);
+          }
           Em.run(function() {
             reject(event.target.result);
             db.close();
@@ -275,7 +279,7 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
     var _this = this;
 
     return new Ember.RSVP.Promise(function(resolve, reject) {
-      var modelName = type.toString(),
+      var modelName = type.typeKey,
           result = [],
           connection, transaction, objectStore, findRequest, cursor;
 
@@ -300,6 +304,9 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
         }
 
         cursor.onerror = function(event) {
+          if (Ember.testing) {
+            console.error("IndexedDB error", event.target.errorCode);
+          }
           Em.run(function() {
             reject(event.target.result);
             db.close();
@@ -325,7 +332,7 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
    */
   createRecord: function (store, type, record) {
     var _this = this,
-        modelName = type.toString();
+        modelName = type.typeKey;
 
     return new Ember.RSVP.Promise(function(resolve, reject) {
       var connection, transaction, objectStore, saveRequest, serializedRecord;
@@ -393,7 +400,7 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
         serializedRecord = record.serialize({includeId: true});
 
     return new Ember.RSVP.Promise(function(resolve, reject) {
-      var modelName = type.toString(),
+      var modelName = type.typeKey,
           id = record.id,
           connection, transaction, objectStore, putRequest;
 
@@ -427,6 +434,9 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
         };
 
         putRequest.onerror = function(event) {
+          if (Ember.testing) {
+            console.error("IndexedDB error", event.target.errorCode);
+          }
           Em.run(function() {
             reject(event.target.result);
             db.close();
@@ -447,7 +457,7 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
     var _this = this;
 
     return new Ember.RSVP.Promise(function(resolve, reject) {
-      var modelName = type.toString(),
+      var modelName = type.typeKey,
           serializedRecord = record.serialize({includeId: true}),
           id = serializedRecord.id,
           connection, transaction, objectStore, operation;
@@ -492,6 +502,9 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
         };
 
         operation.onerror = function(event) {
+          if (Ember.testing) {
+            console.error("IndexedDB error", event.target.errorCode);
+          }
           Em.run(function() {
             db.close();
             reject(event.target.result);
