@@ -2,6 +2,402 @@
 /*global DS*/
 'use strict';
 
+DS.IndexedDBMigration = Ember.Object.extend({
+  /**
+   * This mostly a placeholder, given this value is defined by the adapter.
+   *
+   * @var databaseName
+   */
+  databaseName: "_default",
+
+  /**
+   * Whenever the version is incremented, IndexedDB will run the update code
+   * and update the schema. It's is defined in the adapter and changed by it
+   * here.
+   *
+   * @var databaseName
+   */
+  version: 1,
+
+  /**
+   * This is run the first time the adapter is initialized (when page opens).
+   * It basically checks if the schema needs to be updated, and then runs the
+   * proper migrations.
+   *
+   * @method migrate
+   */
+  migrate: function() {
+    var _this = this;
+
+    return new Ember.RSVP.Promise(function(resolve, reject) {
+      var connection = indexedDB.open(_this.databaseName, _this.version);
+      connection.onsuccess = function() {
+        var result = this.result;
+
+        Em.run(function() {
+          result.close();
+          resolve();
+        });
+      }
+
+      connection.onupgradeneeded = function(event) {
+        Em.run(function() {
+          _this.set('memoizedOpenDatabaseForUpgrade', event.target.result);
+          _this.runMigrations();
+          _this.set('memoizedOpenDatabaseForUpgrade', null);
+        });
+      }
+
+      connection.onerror = function(e) {
+        Em.run(function() {
+          console.log('Failure connecting to IndexedDB database ' + _this.databaseName);
+          reject(e);
+        })
+      }
+    });
+  },
+
+
+  /**
+   * This is a method that can be used inside a migration, such as:
+   *
+   *     App.ApplicationAdapter = DS.IndexedDBAdapter.extend({
+   *       databaseName: 'some_database_name'
+   *       version: 1,
+   *       migrations: function() {
+   *         this.addModel(App.Person);
+   *         this.addModel(App.Phone);
+   *       }
+   *     });
+   *
+   * In this case, the code will create the schema for App.Person and
+   * App.Phone automatically.
+   *
+   * @method addModel
+   * @param {DS.Model} type
+   */
+  addModel: function(model, opts) {
+    var db = this.memoizedOpenDatabaseForUpgrade,
+        modelName = model.toString(),
+        opts = opts || {},
+        _this = this;
+
+    Em.run(function() {
+      if (!db.objectStoreNames.contains(modelName)) {
+        var keyOpts = { keyPath: "id" },
+            objectStore;
+
+        if (opts.autoIncrement) {
+          keyOpts["autoIncrement"] = opts.autoIncrement;
+        }
+
+        if (opts.keyPath) {
+          keyOpts["keyPath"] = opts.keyPath;
+        }
+        objectStore = db.createObjectStore(modelName, keyOpts);
+      }
+    });
+
+    //objectStore.createIndex("name", "name", { unique: false });
+    //objectStore.createIndex("email", "email", { unique: true });
+  },
+
+  /**
+   * Runs the migrations.
+   *
+   * @method runMigrations
+   * @private
+   */
+  runMigrations: function() {
+    this.migrations.call(this);
+  },
+
+  /**
+   * Deprecated
+   */
+  currentDbVersion: function() {
+    var instance = indexedDB.open(this.databaseName),
+        version;
+
+    return new Ember.RSVP.Promise(function(resolve, reject) {
+      instance.onsuccess = function(event) {
+        var result = this.result;
+        Em.run(function() {
+          result.close();
+          resolve(event.target.result.version);
+        });
+      }
+      instance.onerror = function(event) {
+        var result = this.result;
+        Em.run(function() {
+          result.close();
+          reject(event);
+        });
+      }
+    });
+  },
+
+  memoizedOpenDatabaseForUpgrade: null,
+});
+
+DS.IndexedDBSerializer = DS.JSONSerializer.extend({
+  serializeHasMany: function(record, json, relationship) {
+    var key = relationship.key,
+        relationshipType = DS.RelationshipChange.determineRelationshipType(record.constructor, relationship);
+
+    if (relationshipType === 'manyToNone' ||
+        relationshipType === 'manyToMany' ||
+        relationshipType === 'manyToOne') {
+      json[key] = record.get(key).mapBy('id');
+    // TODO support for polymorphic manyToNone and manyToMany relationships
+    }
+  },
+  /**
+   * Extracts whatever was returned from the adapter.
+   *
+   * If the adapter returns relationships in an embedded way, such as follows:
+   *
+   * ```js
+   * {
+   *   "id": 1,
+   *   "title": "Rails Rambo",
+   *
+   *   "_embedded": {
+   *     "comment": [{
+   *       "id": 1,
+   *       "comment_title": "FIRST"
+   *     }, {
+   *       "id": 2,
+   *       "comment_title": "Rails is unagi"
+   *     }]
+   *   }
+   * }
+   *
+   * this method will create separated JSON for each resource and then push
+   * them individually to the Store.
+   *
+   * In the end, only the main resource will remain, containing the ids of its
+   * relationships. Given the relations are already in the Store, we will
+   * return a JSON with the main resource alone. The Store will sort out the
+   * associations by itself.
+   *
+   * @method extractSingle
+   * @private
+   * @param {DS.Store} store the returned store
+   * @param {DS.Model} type the type/model
+   * @param {Object} payload returned JSON
+   */
+  extractSingle: function(store, type, payload) {
+    if (payload && payload._embedded) {
+      for (var relation in payload._embedded) {
+        var typeName = Ember.String.singularize(relation),
+            embeddedPayload = payload._embedded[relation];
+
+        if (embeddedPayload) {
+          if (Object.prototype.toString.call(embeddedPayload) === '[object Array]') {
+            store.pushMany(typeName, embeddedPayload);
+          } else {
+            store.push(typeName, embeddedPayload);
+          }
+        }
+      }
+
+      delete payload._embedded;
+    }
+
+    return this.normalize(type, payload);
+  },
+
+  /**
+   * This is exactly the same as extractSingle, but used in an array.
+   *
+   * @method extractSingle
+   * @private
+   * @param {DS.Store} store the returned store
+   * @param {DS.Model} type the type/model
+   * @param {Array} payload returned JSONs
+   */
+  extractArray: function(store, type, payload) {
+    var serializer = this;
+
+    return payload.map(function(record) {
+      var extracted = serializer.extractSingle(store, type, record);
+      return serializer.normalize(type, record);
+    });
+  }
+});
+
+/*global Ember*/
+/*global DS*/
+'use strict';
+
+/**
+ * SmartSearch allows the adapter to make queries that are broader and that
+ * will, in most business cases, yield more relevant results.
+ *
+ * It has a drawback, though: less performant queries. It shouldn't be a problem
+ * for smaller data stores.
+ */
+DS.IndexedDBSmartSearch = Ember.Object.extend({
+
+  field:       null,
+  queryString: null,
+  record:      null,
+  type:        null,
+
+  /**
+   * The entrypoint. It tries to match the current query field against the
+   * record. See below each query explained.
+   *
+   * == Search ==
+   *
+   *     store.findQuery('person', {search: "rao"})
+   *
+   * This will will search for any field that has the string rao, such as
+   * "Rambo".
+   *
+   * == Search ==
+   *
+   *     store.findQuery('person', {createdAt: "32 days ago"})
+   *
+   * Given `createdAt` field has a transform type `date`, it will returns only
+   * records that match the 32nd day ago.
+   *
+   * If the fields doesn't have the `date` transform, nothing is queried.
+   *
+   * Besides `x days ago`, `today` and `yesterday` are also accepted.
+   */
+  isMatch: function() {
+    var record      = this.get('record'),
+        type        = this.get('type'),
+        field       = this.get('field'),
+        queryString = this.get('queryString'),
+        fieldType   = this.fieldType(field),
+        queryType;
+
+    if (fieldType === "search") {
+      queryType = 'searchField';
+    } else if (fieldType === "date") {
+      queryType = 'dateField';
+    } else {
+      queryType = 'regularField';
+    }
+
+    return this[queryType](type, record, field, queryString);
+  },
+
+  /**
+   * Searches for string in any field. Consider the following query:
+   *
+   *     store.findQuery('person', {search: "rmbo"})
+   *
+   * This would match a field such as `{name: "Rambo"}`.
+   *
+   * @method searchField
+   */
+  searchField: function(type, record, field, queryString) {
+    var isMatch;
+
+    for (var queriedField in record) {
+      var isSearchField = this.get('fieldSearchCriteria')(queriedField, type),
+          fieldValue = record[queriedField];
+
+      if (!isSearchField)
+        continue;
+
+      if (!queryString || queryString == " ") { return false; }
+
+      if (Object.prototype.toString.call(queryString).match("RegExp")) {
+        isMatch = isMatch || new RegExp(queryString).test(fieldValue);
+      } else {
+        isMatch = isMatch || (fieldValue === queryString);
+
+        var str,
+            strArray = [];
+
+        for (var i = 0, len = queryString.length; i < len; i++) {
+          strArray.push(queryString[i]);
+        }
+
+        str = new RegExp(strArray.join(".*"), "i");
+        isMatch = isMatch || new RegExp(str).test(fieldValue);
+      }
+    }
+
+    return isMatch;
+  },
+
+  dateField: function(type, record, field, queryString) {
+    var rawValue = record[field],
+        date = (new Date(Date.parse(rawValue))),
+        targetDate = new Date(),
+        match;
+
+    var IsMatchToDate = function(targetDate) {
+      var year   = targetDate.getFullYear(),
+          month  = targetDate.getMonth(),
+          day    = targetDate.getDate(),
+          hour   = targetDate.getHours(),
+          minute = targetDate.getMinutes();
+
+      if (date.getFullYear() == year &&
+          date.getMonth()    == month &&
+          date.getDate()     == day) {
+        return true;
+      }
+    }
+
+    if (queryString === "today") {
+      if (IsMatchToDate(targetDate)) {
+        return true;
+      }
+    } else if (queryString === "yesterday") {
+      targetDate.setDate(targetDate.getDate() - 1);
+      if (IsMatchToDate(targetDate)) {
+        return true;
+      }
+    } else if (match = queryString.match(/([0-9]{1,}) days ago/i)) {
+      targetDate.setDate(targetDate.getDate() - match[1]);
+      if (IsMatchToDate(targetDate)) {
+        return true;
+      }
+    }
+
+    return false;
+  },
+
+  regularField: function(type, record, field, queryString) {
+    var queriedField = record[field];
+
+    if (Object.prototype.toString.call(queryString).match("RegExp")) {
+      return new RegExp(queryString).test(queriedField);
+    } else {
+      return (queriedField === queryString);
+    }
+  },
+
+  fieldType: function(fieldName) {
+    if (fieldName === "search") {
+      return "search";
+    } else {
+      var type = this.get('type'),
+          transform;
+
+      type.eachTransformedAttribute(function(name, type) {
+        if (name == fieldName) {
+          transform = type;
+        }
+      });
+
+      return transform;
+    }
+  }
+});
+
+/*global Ember*/
+/*global DS*/
+'use strict';
+
 DS.IndexedDBAdapter = DS.Adapter.extend({
   databaseName: 'IDBAdapter',
 
@@ -63,7 +459,7 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
     }
 
     return new Ember.RSVP.Promise(function(resolve, reject) {
-      var modelName = type.typeKey,
+      var modelName = type.toString(),
           connection, transaction, objectStore, findRequest;
 
       adapter.openDatabase().then(function(db) {
@@ -94,7 +490,6 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
         };
 
         findRequest.onerror = function(event) {
-          console.error("IndexedDB error", event.target.errorCode);
           Em.run(function() {
             reject(event.target.result);
             db.close();
@@ -117,7 +512,7 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
     var adapter = this;
 
     return new Ember.RSVP.Promise(function(resolve, reject) {
-      var modelName = type.typeKey,
+      var modelName = type.toString(),
           result = [],
           connection, transaction, objectStore, findRequest, cursor;
 
@@ -142,7 +537,7 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
           });
         }
 
-        cursor.onerror = function(event) {
+        cursor.onerror = function() {
           Em.run(function() {
             reject(event.target.result);
             db.close();
@@ -170,7 +565,7 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
     var adapter = this;
 
     return new Ember.RSVP.Promise(function(resolve, reject) {
-      var modelName = type.typeKey,
+      var modelName = type.toString(),
           result = [],
           connection, transaction, objectStore, findRequest, cursor;
 
@@ -218,9 +613,6 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
         }
 
         cursor.onerror = function(event) {
-          if (Ember.testing) {
-            console.error("IndexedDB error", event.target.errorCode);
-          }
           Em.run(function() {
             reject(event.target.result);
             db.close();
@@ -279,7 +671,7 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
     var _this = this;
 
     return new Ember.RSVP.Promise(function(resolve, reject) {
-      var modelName = type.typeKey,
+      var modelName = type.toString(),
           result = [],
           connection, transaction, objectStore, findRequest, cursor;
 
@@ -304,9 +696,6 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
         }
 
         cursor.onerror = function(event) {
-          if (Ember.testing) {
-            console.error("IndexedDB error", event.target.errorCode);
-          }
           Em.run(function() {
             reject(event.target.result);
             db.close();
@@ -332,7 +721,7 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
    */
   createRecord: function (store, type, record) {
     var _this = this,
-        modelName = type.typeKey;
+        modelName = type.toString();
 
     return new Ember.RSVP.Promise(function(resolve, reject) {
       var connection, transaction, objectStore, saveRequest, serializedRecord;
@@ -400,7 +789,7 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
         serializedRecord = record.serialize({includeId: true});
 
     return new Ember.RSVP.Promise(function(resolve, reject) {
-      var modelName = type.typeKey,
+      var modelName = type.toString(),
           id = record.id,
           connection, transaction, objectStore, putRequest;
 
@@ -434,9 +823,6 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
         };
 
         putRequest.onerror = function(event) {
-          if (Ember.testing) {
-            console.error("IndexedDB error", event.target.errorCode);
-          }
           Em.run(function() {
             reject(event.target.result);
             db.close();
@@ -457,7 +843,7 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
     var _this = this;
 
     return new Ember.RSVP.Promise(function(resolve, reject) {
-      var modelName = type.typeKey,
+      var modelName = type.toString(),
           serializedRecord = record.serialize({includeId: true}),
           id = serializedRecord.id,
           connection, transaction, objectStore, operation;
@@ -502,9 +888,6 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
         };
 
         operation.onerror = function(event) {
-          if (Ember.testing) {
-            console.error("IndexedDB error", event.target.errorCode);
-          }
           Em.run(function() {
             db.close();
             reject(event.target.result);

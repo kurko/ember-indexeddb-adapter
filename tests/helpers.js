@@ -10,7 +10,7 @@ var myDate = function(offset) {
 };
 
 const FIXTURES = {
-  "App.Person": [
+  "person": [
     { id: "p1", name: "Rambo", cool: true, phones: ['ph1', 'ph2'], createdAt: "2013-01-02T16:44:57.000Z" },
     { id: "p2", name: "Braddock", cool: false, createdAt: "Fri Jan 31 2013 17:45:16 GMT-0200 (BRST)" },
     {
@@ -32,7 +32,7 @@ const FIXTURES = {
       createdAt: myDate(-45)
     }
   ],
-  "App.Phone": [
+  "phone": [
     { id: "ph1", number: "11", person: "p1" },
     { id: "ph2", number: "22", person: "p1" }
   ]
@@ -58,11 +58,11 @@ var setupStore = function(options) {
     adapter: adapter
   }));
 
-  container.register('serializer:_default', DS.IndexedDBSerializer);
+  container.register('serializer:application', DS.IndexedDBSerializer.extend());
 
   container.injection('serializer', 'store', 'store:main');
 
-  env.serializer = container.lookup('serializer:_default');
+  env.serializer = container.lookup('serializer:application');
   env.store = container.lookup('store:main');
   env.adapter = env.store.get('defaultAdapter');
 

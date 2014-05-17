@@ -23,8 +23,8 @@ module('Integration/DS.IndexedDBAdapter', {
         person: DS.belongsTo('person')
       });
 
-      App.Person.toString = function() { return "App.Person"; }
-      App.Phone.toString  = function() { return "App.Phone"; }
+
+      App.ApplicationSerializer = DS.IndexedDBSerializer.extend();
 
       var migrationsPromise = new Ember.RSVP.Promise(function(resolve, reject) {
         Adapter = DS.IndexedDBAdapter.extend({
@@ -33,8 +33,8 @@ module('Integration/DS.IndexedDBAdapter', {
           migrations: function() {
             var _this = this;
             Em.run(function() {
-              _this.addModel(App.Person);
-              _this.addModel(App.Phone);
+              _this.addModel('person');
+              _this.addModel('phone');
               resolve();
             });
           }
