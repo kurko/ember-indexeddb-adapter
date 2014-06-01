@@ -171,7 +171,7 @@ var openDatabase = function(dbName) {
 
 var logSchema = function(dbName) {
   return openDatabase(dbName).then(function(db) {
-    console.log(db.objectStoreNames);
+    console.log("objectStoreNames", db.objectStoreNames);
     return Ember.RSVP.resolve();
   });
 }

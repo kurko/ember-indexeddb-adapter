@@ -78,6 +78,7 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
             if (allowRecursive && record) {
               adapter.loadRelationships(type, record).then(function(finalRecord) {
                 Em.run(function() {
+                  adapter.cleanLostRelationshipsReferences(store, type, finalRecord);
                   resolve(finalRecord);
                 });
               });
@@ -796,5 +797,53 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
     } else {
       return relationships;
     }
+  },
+
+  /**
+   * Some times, a payload has a reference for an association, like `comments`
+   * below, but the actual record doesn't exist anymore.
+   *
+   *   payload = {
+   *     id: "1",
+   *     comments: ["2"],
+   *     _embedded: {
+   *     }
+   *   };
+   *
+   * In this case, we should not return the `comments: ["2"]` relationship to
+   * the serializer.
+   *
+   * @method cleanLostRelationshipsReferences
+   * @private
+   * @param {DS.Model} type
+   * @param {Hash} payload
+   */
+  cleanLostRelationshipsReferences: function(store, type, payload) {
+    var adapter = this;
+
+    Ember.get(type, 'relationshipsByName').forEach(function(relationName, properties) {
+      var NoEmbeddedRelations = function() {
+        return !payload._embedded || !payload._embedded[relationName];
+      }
+
+      var IsLostRelationshipReference = function(id) {
+        if (store.hasRecordForId(properties.type, id)) {
+          return false;
+        } else if(NoEmbeddedRelations()) {
+          delete payload[relationName];
+          return true;
+        }
+      }
+
+      if (adapter.isArray(payload[relationName])) {
+        payload[relationName] = payload[relationName].filter(function(id) {
+          return !IsLostRelationshipReference(id);
+        });
+      } else if (payload[relationName]) {
+        if (IsLostRelationshipReference(payload[relationName])) {
+          payload[relationName] = null;
+        }
+      }
+    });
   }
 });

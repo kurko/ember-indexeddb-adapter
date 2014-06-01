@@ -67,7 +67,7 @@ test('existence', function() {
 });
 
 test('#find should find records and then its relations', function() {
-  expect(7);
+  expect(8);
 
   stop();
   store.find('person', 'p1').then(function(person) {
@@ -79,10 +79,14 @@ test('#find should find records and then its relations', function() {
     var phone1 = phones.get('firstObject'),
         phone2 = phones.get('lastObject');
 
-    equal(get(phone1, 'id'),     'ph1', 'first phone id is loaded correctly');
-    equal(get(phone1, 'number'), '11',  'first phone number is loaded correctly');
-    equal(get(phone2, 'id'),     'ph2', 'second phone id is loaded correctly');
-    equal(get(phone2, 'number'), '22',  'second phone number is loaded correctly');
+    equal(get(phones, 'length'), 2,     'person has 2 phones');
+
+    if (phones.get("length") == 2) {
+      equal(get(phone1, 'id'),     'ph1', 'first phone id is loaded correctly');
+      equal(get(phone1, 'number'), '11',  'first phone number is loaded correctly');
+      equal(get(phone2, 'id'),     'ph2', 'second phone id is loaded correctly');
+      equal(get(phone2, 'number'), '22',  'second phone number is loaded correctly');
+    }
 
     start();
   });
@@ -95,6 +99,52 @@ test('#find - promise is rejected when nothing is found', function() {
     ok(false, "Item is not found");
   }, function() {
     ok(true, "Item is not found");
+    start();
+  });
+});
+
+test("#find - disregards associated records that don't exist anymore", function() {
+  var transaction, objectStore, operation;
+  stop();
+
+  openDatabase(databaseName).then(function(db) {
+    transaction = db.transaction("phone", "readwrite");
+    objectStore = transaction.objectStore("phone");
+    operation = objectStore.delete("ph1");
+    operation = objectStore.delete("ph2");
+
+    return Ember.RSVP.Promise(function(resolve, reject) {
+      operation.onsuccess = function(event) {
+        Em.run(function() {
+          db.close();
+          resolve();
+        });
+      };
+    });
+  }).then(function() {
+    return openDatabase(databaseName);
+  }).then(function(db) {
+    transaction = db.transaction("person");
+    objectStore = transaction.objectStore("person");
+
+    operation = objectStore.get("p1");
+    return Ember.RSVP.Promise(function(resolve, reject) {
+      operation.onsuccess = function(event) {
+        var record = this.result;
+        Em.run(function() {
+          db.close();
+          resolve(record);
+        });
+      }
+    });
+  }).then(function(personFromDB) {
+    equal(personFromDB.phones[0], "ph1", "person's phone1 association is still there");
+    equal(personFromDB.phones[1], "ph2", "person's phone2 association is still there");
+    return Ember.RSVP.resolve();
+  }).then(function() {
+    return store.find('person', 'p1');
+  }).then(function(person) {
+    equal(person.get('phones.length'), 0, "person has only no phone now");
     start();
   });
 });
@@ -299,14 +349,8 @@ test("#createRecord - save shouldn't lose relationships", function() {
 test("#save doesn't exclude relationships from the store", function() {
   stop();
   Em.run(function() {
-    person = store.createRecord('person', {
-      name: "Clint",
-      cool: true
-    });
-
-    phone = store.createRecord('phone', {
-      number: 1234
-    });
+    person = store.createRecord('person', { name: "Clint", cool: true });
+    phone  = store.createRecord('phone', { number: 1234 });
 
     person.save().then(function(person) {
       equal(person.get('phones.length'), 0, "person has no phones initialy");
@@ -378,7 +422,7 @@ test('#updateRecord should update records', function() {
   });
 });
 
-test('#deleteRecord delete a record', function() {
+test('#deleteRecord - deletes a parent record', function() {
   expect(2);
   stop();
   var AssertPersonIsDeleted = function() {
@@ -399,6 +443,23 @@ test('#deleteRecord delete a record', function() {
     person.deleteRecord();
     person.on("didDelete", AssertPersonIsDeleted);
     person.save();
+  });
+});
+
+test('#deleteRecord - deletes an associated record and updates the parent', function() {
+  stop();
+
+  store.find('person', 'p1').then(function(person) {
+    equal(person.get('phones.length'), 2, "person has 2 phones initially");
+
+    return store.find('phone', 'ph1');
+  }).then(function(phone) {
+    phone.deleteRecord();
+
+    return store.find('person', 'p1');
+  }).then(function(person) {
+    equal(person.get('phones.length'), 1, "person has only 1 phone now");
+    start();
   });
 });
 
