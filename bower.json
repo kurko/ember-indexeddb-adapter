@@ -1,6 +1,6 @@
 {
   "name": "ember-indexeddb-adapter",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "main": [
     "dist/ember_indexeddb_adapter.js"
   ],
