@@ -5,8 +5,8 @@
     "dist/ember_indexeddb_adapter.js"
   ],
   "dependencies": {
-    "jquery": "1.9.1",
-    "ember": "1.2.1",
+    "jquery": "~1.9",
+    "ember": "~1",
     "ember-data": "1.0.0-beta.7"
   },
   "devDependencies": {
