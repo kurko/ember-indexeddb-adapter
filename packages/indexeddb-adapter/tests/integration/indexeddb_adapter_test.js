@@ -287,18 +287,20 @@ pending('#createRecord should save embedded relations', function() {
   });
 });
 
-test("#save doesn't lose relationships from the store", function() {
+test("#save doesn't lose or duplicate relationships from the store", function() {
   var phone, person;
 
   stop();
   Em.run(function() {
     person = store.createRecord('person', { name: "Clint", cool: true });
     phone = store.createRecord('phone', { number: 1234 });
+    equal(person.get('phones.length'), 0, "person has 0 phones initially");
 
     person.get('phones').pushObject(phone);
+    equal(person.get('phones.length'), 1, "person has 1 phone after pushing relation");
 
     person.save().then(function(person) {
-      equal(person.get('phones.length'), 1, "person has no phones initialy");
+      equal(person.get('phones.length'), 1, "person has 1 phone after saving");
 
       return phone.save();
     }).then(function(phone) {
