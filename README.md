@@ -14,7 +14,7 @@ Download the latest distribution or use bower to install
 ```js
 App.ApplicationSerializer = DS.IndexedDBSerializer.extend();
 App.ApplicationAdapter = DS.IndexedDBAdapter.extend({
-  databaseName: 'some_database_name'
+  databaseName: 'some_database_name',
   version: 1,
   migrations: function() {
     this.addModel('person');
