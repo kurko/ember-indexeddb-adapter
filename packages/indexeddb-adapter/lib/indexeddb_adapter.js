@@ -250,7 +250,7 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
         queryString: queryString,
         record: record,
         type: type,
-        fieldSearchCriteria: this.get('findQuerySearchCriteria').bind(this)
+        fieldSearchCriteria: this.get('findQuerySearchCriteria')
       });
 
       return smartSearch.isMatch();
@@ -486,7 +486,7 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
 
         transaction.oncomplete = function(t) {
           Em.run(function() {
-            resolve(serializedRecord);
+            resolve();
             db.close();
           });
         }
@@ -498,7 +498,7 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
         operation.onsuccess = function(event) {
           Em.run(function() {
             db.close();
-            resolve(serializedRecord);
+            resolve();
           });
         };
 

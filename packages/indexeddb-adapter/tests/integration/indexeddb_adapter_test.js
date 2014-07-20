@@ -113,7 +113,7 @@ test("#find - disregards associated records that don't exist anymore", function(
     operation = objectStore.delete("ph1");
     operation = objectStore.delete("ph2");
 
-    return new Ember.RSVP.Promise(function(resolve, reject) {
+    return Ember.RSVP.Promise(function(resolve, reject) {
       operation.onsuccess = function(event) {
         Em.run(function() {
           db.close();
@@ -128,20 +128,14 @@ test("#find - disregards associated records that don't exist anymore", function(
     objectStore = transaction.objectStore("person");
 
     operation = objectStore.get("p1");
-    return new Ember.RSVP.Promise(function(resolve, reject) {
+    return Ember.RSVP.Promise(function(resolve, reject) {
       operation.onsuccess = function(event) {
         var record = this.result;
         Em.run(function() {
           db.close();
           resolve(record);
         });
-      };
-      operation.onerror = function(event){
-        Em.run(function() {
-          db.close();
-          reject(event);
-        });
-      };
+      }
     });
   }).then(function(personFromDB) {
     equal(personFromDB.phones[0], "ph1", "person's phone1 association is still there");

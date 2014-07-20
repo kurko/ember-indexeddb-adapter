@@ -220,8 +220,7 @@ DS.IndexedDBSerializer = DS.JSONSerializer.extend({
     var serializer = this;
 
     return payload.map(function(record) {
-      var extracted = serializer.extractSingle(store, type, record);
-      return serializer.normalize(type, record);
+      return serializer.extractSingle(store, type, record);
     });
   }
 });
@@ -881,7 +880,7 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
 
         transaction.oncomplete = function(t) {
           Em.run(function() {
-            resolve(serializedRecord);
+            resolve();
             db.close();
           });
         }
@@ -893,7 +892,7 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
         operation.onsuccess = function(event) {
           Em.run(function() {
             db.close();
-            resolve(serializedRecord);
+            resolve();
           });
         };
 
