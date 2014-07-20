@@ -250,7 +250,7 @@ DS.IndexedDBAdapter = DS.Adapter.extend({
         queryString: queryString,
         record: record,
         type: type,
-        fieldSearchCriteria: this.get('findQuerySearchCriteria')
+        fieldSearchCriteria: this.get('findQuerySearchCriteria').bind(this)
       });
 
       return smartSearch.isMatch();
