@@ -70,7 +70,7 @@ DS.IndexedDBSmartSearch = Ember.Object.extend({
     var isMatch;
 
     for (var queriedField in record) {
-      var isSearchField = this.get('fieldSearchCriteria')(queriedField, type),
+      var isSearchField = this.get('fieldSearchCriteria').call(this, queriedField, type),
           fieldValue = record[queriedField];
 
       if (!isSearchField)
