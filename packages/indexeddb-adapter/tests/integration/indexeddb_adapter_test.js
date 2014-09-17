@@ -15,7 +15,8 @@ module('Integration/DS.IndexedDBAdapter', {
       App.Person = DS.Model.extend({
         name: DS.attr('string'),
         cool: DS.attr('boolean'),
-        phones: DS.hasMany('phone')
+        phones: DS.hasMany('phone'),
+        createdAt: DS.attr('date')
       });
 
       App.Phone = DS.Model.extend({
@@ -67,13 +68,14 @@ test('existence', function() {
 });
 
 test('#find should find records and then its relations', function() {
-  expect(8);
+  expect(9);
 
   stop();
   store.find('person', 'p1').then(function(person) {
     equal(get(person, 'id'),   'p1',    'id is loaded correctly');
     equal(get(person, 'name'), 'Rambo', 'name is loaded correctly');
     equal(get(person, 'cool'),  true,   'bool is loaded correctly');
+    deepEqual(get(person, 'createdAt'),  new Date("2013-01-02T16:44:57.000Z"), 'date is loaded correctly');
     return person.get('phones');
   }).then(function(phones) {
     var phone1 = phones.get('firstObject'),
@@ -373,7 +375,7 @@ test("#save doesn't exclude relationships from the store", function() {
 });
 
 test('#findAll returns all records', function() {
-  expect(4);
+  expect(5);
 
   stop();
   store.findAll('person').then(function(records) {
@@ -386,6 +388,8 @@ test('#findAll returns all records', function() {
     equal(get(firstRecord,  'name'), "Rambo", "First item's name is one");
     equal(get(secondRecord, 'name'), "Braddock", "Second item's name is two");
     equal(get(thirdRecord,  'name'), "Billie Jack", "Third item's name is three");
+
+    deepEqual(get(firstRecord, 'createdAt'), new Date("2013-01-02T16:44:57.000Z"), "First item's date is loaded");
 
     start();
   });
