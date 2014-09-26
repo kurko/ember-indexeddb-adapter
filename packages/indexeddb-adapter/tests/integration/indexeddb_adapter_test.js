@@ -547,13 +547,14 @@ test('#find returns hasMany association', function() {
 });
 
 test('load belongsTo association when {async: false}', function() {
-  expect(2);
+  expect(3);
   stop();
   store.find('phone', 'ph1').then(function(phone) {
     var person = phone.get('person');
 
     equal(get(person, 'id'),   "p1",    "person id is correct");
     equal(get(person, 'name'), "Rambo", "person name is correct");
+    deepEqual(get(person, 'createdAt'),  new Date("2013-01-02T16:44:57.000Z"), 'date is correct');
     start();
   });
 });

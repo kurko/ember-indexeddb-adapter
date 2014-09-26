@@ -51,11 +51,16 @@ DS.IndexedDBSerializer = DS.JSONSerializer.extend({
         var typeName = Ember.String.singularize(relation),
             embeddedPayload = payload._embedded[relation];
 
+        var embeddedType = store.modelFor(typeName);
+
         if (embeddedPayload) {
           if (Object.prototype.toString.call(embeddedPayload) === '[object Array]') {
-            store.pushMany(typeName, embeddedPayload);
+            var normalizedItems = embeddedPayload.map(
+              function (embeddedItem) { return this.normalize(embeddedType, embeddedItem); }.bind(this)
+            );
+            store.pushMany(typeName, normalizedItems);
           } else {
-            store.push(typeName, embeddedPayload);
+            store.push(typeName, this.normalize(embeddedType, embeddedPayload));
           }
         }
       }
