@@ -9,7 +9,10 @@ module('Unit/DS.IndexedDBSerializer', {
     stop();
     Ember.run(function() {
       storeDouble = { push: function() {}, pushMany: function() {}, modelFor: function () {} };
-      modelDouble = { relationshipsByName: ["comments", "readers"] };
+      modelDouble = {
+        relationshipsByName: ["comments", "readers"],
+        typeForRelationship: function (name) { return Ember.String.singularize(name); }
+      };
 
       subject = DS.IndexedDBSerializer.create({
         normalize: function(type, payload) {

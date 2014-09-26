@@ -11,7 +11,7 @@ var myDate = function(offset) {
 
 const FIXTURES = {
   "person": [
-    { id: "p1", name: "Rambo", cool: true, phones: ['ph1', 'ph2'], createdAt: "2013-01-02T16:44:57.000Z" },
+    { id: "p1", name: "Rambo", cool: true, phones: ['ph1', 'ph2'], homeAddresses: ['s1'], createdAt: "2013-01-02T16:44:57.000Z" },
     { id: "p2", name: "Braddock", cool: false, createdAt: "Fri Jan 31 2013 17:45:16 GMT-0200 (BRST)" },
     {
       id: "p3",
@@ -35,6 +35,9 @@ const FIXTURES = {
   "phone": [
     { id: "ph1", number: "11", person: "p1" },
     { id: "ph2", number: "22", person: "p1" }
+  ],
+  "street_address": [
+    { id: "s1", person: "p1", houseNumber: '458', street: 'Laplace Ave' }
   ]
 };
 
