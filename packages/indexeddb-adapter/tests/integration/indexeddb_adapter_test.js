@@ -261,6 +261,7 @@ test('#createRecord should save hasMany relationships', function() {
  * Saving embedded relations will create a lot of complexity. It's not
  * something even the official adapters are doing right now.
  */
+ /*
 pending('#createRecord should save embedded relations', function() {
   var person, phone;
   expect(5);
@@ -288,7 +289,7 @@ pending('#createRecord should save embedded relations', function() {
     });
   });
 });
-
+ */
 test("#save doesn't lose or duplicate relationships from the store", function() {
   var phone, person;
 
