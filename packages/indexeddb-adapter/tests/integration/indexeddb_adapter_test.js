@@ -15,7 +15,8 @@ module('Integration/DS.IndexedDBAdapter', {
       App.Person = DS.Model.extend({
         name: DS.attr('string'),
         cool: DS.attr('boolean'),
-        phones: DS.hasMany('phone')
+        phones: DS.hasMany('phone'),
+        createdAt: DS.attr('date')
       });
 
       App.Phone = DS.Model.extend({
@@ -67,13 +68,14 @@ test('existence', function() {
 });
 
 test('#find should find records and then its relations', function() {
-  expect(8);
+  expect(9);
 
   stop();
   store.find('person', 'p1').then(function(person) {
     equal(get(person, 'id'),   'p1',    'id is loaded correctly');
     equal(get(person, 'name'), 'Rambo', 'name is loaded correctly');
     equal(get(person, 'cool'),  true,   'bool is loaded correctly');
+    deepEqual(get(person, 'createdAt'),  new Date("2013-01-02T16:44:57.000Z"), 'date is loaded correctly');
     return person.get('phones');
   }).then(function(phones) {
     var phone1 = phones.get('firstObject'),
@@ -113,7 +115,7 @@ test("#find - disregards associated records that don't exist anymore", function(
     operation = objectStore.delete("ph1");
     operation = objectStore.delete("ph2");
 
-    return Ember.RSVP.Promise(function(resolve, reject) {
+    return new Ember.RSVP.Promise(function(resolve, reject) {
       operation.onsuccess = function(event) {
         Em.run(function() {
           db.close();
@@ -128,7 +130,7 @@ test("#find - disregards associated records that don't exist anymore", function(
     objectStore = transaction.objectStore("person");
 
     operation = objectStore.get("p1");
-    return Ember.RSVP.Promise(function(resolve, reject) {
+    return new Ember.RSVP.Promise(function(resolve, reject) {
       operation.onsuccess = function(event) {
         var record = this.result;
         Em.run(function() {
@@ -259,6 +261,7 @@ test('#createRecord should save hasMany relationships', function() {
  * Saving embedded relations will create a lot of complexity. It's not
  * something even the official adapters are doing right now.
  */
+ /*
 pending('#createRecord should save embedded relations', function() {
   var person, phone;
   expect(5);
@@ -286,7 +289,7 @@ pending('#createRecord should save embedded relations', function() {
     });
   });
 });
-
+ */
 test("#save doesn't lose or duplicate relationships from the store", function() {
   var phone, person;
 
@@ -373,7 +376,7 @@ test("#save doesn't exclude relationships from the store", function() {
 });
 
 test('#findAll returns all records', function() {
-  expect(4);
+  expect(5);
 
   stop();
   store.findAll('person').then(function(records) {
@@ -386,6 +389,8 @@ test('#findAll returns all records', function() {
     equal(get(firstRecord,  'name'), "Rambo", "First item's name is one");
     equal(get(secondRecord, 'name'), "Braddock", "Second item's name is two");
     equal(get(thirdRecord,  'name'), "Billie Jack", "Third item's name is three");
+
+    deepEqual(get(firstRecord, 'createdAt'), new Date("2013-01-02T16:44:57.000Z"), "First item's date is loaded");
 
     start();
   });
@@ -542,13 +547,14 @@ test('#find returns hasMany association', function() {
 });
 
 test('load belongsTo association when {async: false}', function() {
-  expect(2);
+  expect(3);
   stop();
   store.find('phone', 'ph1').then(function(phone) {
     var person = phone.get('person');
 
     equal(get(person, 'id'),   "p1",    "person id is correct");
     equal(get(person, 'name'), "Rambo", "person name is correct");
+    deepEqual(get(person, 'createdAt'),  new Date("2013-01-02T16:44:57.000Z"), 'date is correct');
     start();
   });
 });

@@ -8,7 +8,7 @@ module('Unit/DS.IndexedDBSerializer', {
   setup: function() {
     stop();
     Ember.run(function() {
-      storeDouble = { push: function() {}, pushMany: function() {} };
+      storeDouble = { push: function() {}, pushMany: function() {}, modelFor: function () {} };
       modelDouble = { relationshipsByName: ["comments", "readers"] };
 
       subject = DS.IndexedDBSerializer.create({
