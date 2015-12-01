@@ -151,7 +151,13 @@ test("#find - disregards associated records that don't exist anymore", function(
           db.close();
           resolve(record);
         });
-      }
+      };
+      operation.onerror = function(event){
+        Em.run(function() {
+          db.close();
+          reject(event);
+        });
+      };
     });
   }).then(function(personFromDB) {
     equal(personFromDB.phones[0], "ph1", "person's phone1 association is still there");
