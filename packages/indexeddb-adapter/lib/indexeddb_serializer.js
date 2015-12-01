@@ -48,7 +48,7 @@ DS.IndexedDBSerializer = DS.JSONSerializer.extend({
   extractSingle: function(store, type, payload) {
     if (payload && payload._embedded) {
       for (var relation in payload._embedded) {
-        var typeName = Ember.String.singularize(relation),
+        var typeName = type.typeForRelationship(relation).typeKey,
             embeddedPayload = payload._embedded[relation];
 
         var embeddedType = store.modelFor(typeName);

@@ -16,6 +16,7 @@ module('Integration/DS.IndexedDBAdapter', {
         name: DS.attr('string'),
         cool: DS.attr('boolean'),
         phones: DS.hasMany('phone'),
+        homeAddresses: DS.hasMany('street_address'),
         createdAt: DS.attr('date')
       });
 
@@ -24,6 +25,11 @@ module('Integration/DS.IndexedDBAdapter', {
         person: DS.belongsTo('person')
       });
 
+      App.StreetAddress = DS.Model.extend({
+        houseNumber: DS.attr('string'),
+        street: DS.attr('string'),
+        person: DS.belongsTo('person')
+      });
 
       App.ApplicationSerializer = DS.IndexedDBSerializer.extend();
 
@@ -36,6 +42,7 @@ module('Integration/DS.IndexedDBAdapter', {
             Em.run(function() {
               _this.addModel('person');
               _this.addModel('phone');
+              _this.addModel('street_address');
               resolve();
             });
           }
@@ -44,6 +51,7 @@ module('Integration/DS.IndexedDBAdapter', {
         env = setupStore({
           person: App.Person,
           phone: App.Phone,
+          street_address: App.StreetAddress,
           adapter: Adapter
         });
 
@@ -68,7 +76,7 @@ test('existence', function() {
 });
 
 test('#find should find records and then its relations', function() {
-  expect(9);
+  expect(11);
 
   stop();
   store.find('person', 'p1').then(function(person) {
@@ -89,6 +97,12 @@ test('#find should find records and then its relations', function() {
       equal(get(phone2, 'id'),     'ph2', 'second phone id is loaded correctly');
       equal(get(phone2, 'number'), '22',  'second phone number is loaded correctly');
     }
+
+    return get(phone1, 'person').get('homeAddresses');
+  }).then(function (homeAddresses) {
+    var addr1 = homeAddresses.get('firstObject');
+    equal(get(addr1, 'houseNumber'), '458', 'home address house number is loaded correctly');
+    equal(get(addr1, 'street'), 'Laplace Ave', 'home address street is loaded correctly');
 
     start();
   });
